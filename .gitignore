@@ -1,0 +1,42 @@
+# Virtual environment
+.venv/
+
+# Python-generated files
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Test and tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local secrets and environment variables
+.env
+.env.*
+
+# Operating system and editor files
+.DS_Store
+.vscode/
+
+# Generated or potentially large data
+data/raw/*
+data/interim/*
+data/processed/*
+data/external/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!data/external/.gitkeep
+
+# Saved models and generated figures
+models/*
+reports/figures/*
+!models/.gitkeep
+!reports/figures/.gitkeep
+```
