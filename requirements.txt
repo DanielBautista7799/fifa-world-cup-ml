@@ -1,7 +1,7 @@
-jupyter
+joblib
 matplotlib
 numpy
 pandas
-pytest
+plotly
 scikit-learn
-plotly>=6.0.0
+streamlit
