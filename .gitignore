@@ -1,3 +1,9 @@
+
+Remove that.
+
+## Replace `.gitignore` with this
+
+```gitignore id="pcnbgc"
 # Virtual environment
 .venv/
 
@@ -19,24 +25,20 @@ htmlcov/
 # Local secrets and environment variables
 .env
 .env.*
+.streamlit/secrets.toml
 
 # Operating system and editor files
 .DS_Store
 .vscode/
 
-# Generated or potentially large data
+# Keep raw/interim/external data private or empty unless intentionally added
 data/raw/*
 data/interim/*
-data/processed/*
 data/external/*
 !data/raw/.gitkeep
 !data/interim/.gitkeep
-!data/processed/.gitkeep
 !data/external/.gitkeep
 
-# Saved models and generated figures
-models/*
+# Ignore generated reports cache, but allow figures if wanted
 reports/figures/*
-!models/.gitkeep
 !reports/figures/.gitkeep
-```
