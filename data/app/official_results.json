@@ -1,3 +1,64 @@
 {
-    "completed_matches": []
+    "completed_matches": [
+      {
+        "match_id": "r16_3_left",
+        "round": "round_of_16",
+        "date": "2026-07-05",
+        "home_team": "Brazil",
+        "away_team": "Norway",
+        "home_score": 1,
+        "away_score": 2,
+        "winner": "Norway"
+      },
+      {
+        "match_id": "r16_3_right",
+        "round": "round_of_16",
+        "date": "2026-07-05",
+        "home_team": "Mexico",
+        "away_team": "England",
+        "home_score": 2,
+        "away_score": 3,
+        "winner": "England"
+      },
+      {
+        "match_id": "r16_2_left",
+        "round": "round_of_16",
+        "date": "2026-07-06",
+        "home_team": "Portugal",
+        "away_team": "Spain",
+        "home_score": 0,
+        "away_score": 1,
+        "winner": "Spain"
+      },
+      {
+        "match_id": "r16_2_right",
+        "round": "round_of_16",
+        "date": "2026-07-06",
+        "home_team": "United States",
+        "away_team": "Belgium",
+        "home_score": 1,
+        "away_score": 4,
+        "winner": "Belgium"
+      },
+      {
+        "match_id": "r16_4_left",
+        "round": "round_of_16",
+        "date": "2026-07-07",
+        "home_team": "Argentina",
+        "away_team": "Egypt",
+        "home_score": 3,
+        "away_score": 2,
+        "winner": "Argentina"
+      },
+      {
+        "match_id": "r16_4_right",
+        "round": "round_of_16",
+        "date": "2026-07-07",
+        "home_team": "Switzerland",
+        "away_team": "Colombia",
+        "home_score": 0,
+        "away_score": 0,
+        "winner": "Switzerland"
+      }
+    ]
   }
