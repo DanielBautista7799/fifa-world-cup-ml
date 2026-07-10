@@ -59,6 +59,16 @@
         "home_score": 0,
         "away_score": 0,
         "winner": "Switzerland"
+      },
+      {
+        "match_id": "qf_1",
+        "round": "quarterfinal",
+        "date": "2026-07-09",
+        "home_team": "Morocco",
+        "away_team": "France",
+        "home_score": 0,
+        "away_score": 2,
+        "winner": "France"
       }
     ]
   }
