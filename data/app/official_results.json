@@ -89,6 +89,26 @@
         "home_score": 1,
         "away_score": 2,
         "winner": "England"
+      },
+      {
+        "match_id": "qf_4",
+        "round": "quarterfinal",
+        "date": "2026-07-11",
+        "home_team": "Argentina",
+        "away_team": "Switzerland",
+        "home_score": 3,
+        "away_score": 1,
+        "winner": "Argentina"
+      },
+      {
+        "match_id": "sf_1",
+        "round": "semifinal",
+        "date": "2026-07-14",
+        "home_team": "France",
+        "away_team": "Spain",
+        "home_score": 0,
+        "away_score": 2,
+        "winner": "Spain"
       }
     ]
   }
