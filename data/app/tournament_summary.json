@@ -1,0 +1,25 @@
+{
+  "tournament": "FIFA World Cup 2026",
+  "status": "complete",
+  "champion": "Spain",
+  "runner_up": "Argentina",
+  "third_place": "England",
+  "fourth_place": "France",
+  "final": {
+    "date": "2026-07-19",
+    "home_team": "Spain",
+    "away_team": "Argentina",
+    "home_score": 1,
+    "away_score": 0,
+    "winner": "Spain",
+    "decision": "after extra time"
+  },
+  "third_place_match": {
+    "date": "2026-07-18",
+    "home_team": "France",
+    "away_team": "England",
+    "home_score": 4,
+    "away_score": 6,
+    "winner": "England"
+  }
+}
