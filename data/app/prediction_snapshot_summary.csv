@@ -1,0 +1,15 @@
+checkpoint_index,snapshot_id,snapshot_date,snapshot_label,snapshot_short_label,trigger_match_id,trigger_result,teams_remaining,top_projected_champion,top_champion_probability,actual_champion,actual_champion_probability,actual_champion_rank
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,14,Argentina,0.311,Spain,0.2106,2
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,13,Argentina,0.3586,Spain,0.2271,2
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,12,Argentina,0.3423,Spain,0.216,2
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,11,Spain,0.3214,Spain,0.3214,1
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,10,Spain,0.3279,Spain,0.3279,1
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,9,Spain,0.329,Spain,0.329,1
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,8,Argentina,0.3351,Spain,0.3254,2
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,7,Argentina,0.3337,Spain,0.3078,2
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,6,Spain,0.3539,Spain,0.3539,1
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,5,Spain,0.3357,Spain,0.3357,1
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,4,Spain,0.3466,Spain,0.3466,1
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,3,Spain,0.5568,Spain,0.5568,1
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,2,Spain,0.5493,Spain,0.5493,1
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,1,Spain,1.0,Spain,1.0,1

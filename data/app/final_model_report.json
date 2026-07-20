@@ -1,0 +1,25 @@
+{
+  "actual_champion": "Spain",
+  "history_method": "Replayed every chronological prefix of official_results.json using only processed match rows dated before 2026-07-05, then applied completed tournament matches one at a time.",
+  "base_data_cutoff_exclusive": "2026-07-05",
+  "total_checkpoints": 14,
+  "simulation_count_per_checkpoint": 10000,
+  "random_seed": 42,
+  "initial_projected_champion": "Argentina",
+  "initial_projected_champion_probability": 0.311,
+  "initial_actual_champion_probability": 0.2106,
+  "initial_actual_champion_rank": 2,
+  "pre_final_projected_champion": "Spain",
+  "pre_final_actual_champion_probability": 0.5493,
+  "highest_actual_champion_probability_before_final": 0.5568,
+  "final_pre_match_odds": [
+    {
+      "team": "Spain",
+      "champion_probability": 0.5493
+    },
+    {
+      "team": "Argentina",
+      "champion_probability": 0.4507
+    }
+  ]
+}

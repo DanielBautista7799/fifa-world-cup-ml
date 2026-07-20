@@ -1,15 +1,197 @@
-snapshot_id,saved_at,snapshot_label,team,quarterfinal,semifinal,final,champion
-20260705_024116,2026-07-05 02:41:16,Initial prediction,Argentina,0.916,0.7652,0.4818,0.3216
-20260705_024116,2026-07-05 02:41:16,Initial prediction,Spain,0.7036,0.5992,0.3912,0.1962
-20260705_024116,2026-07-05 02:41:16,Initial prediction,Brazil,0.8432,0.61,0.3104,0.1832
-20260705_024116,2026-07-05 02:41:16,Initial prediction,France,1.0,0.6944,0.3584,0.1462
-20260705_024116,2026-07-05 02:41:16,Initial prediction,England,0.7764,0.2952,0.1254,0.0642
-20260705_024116,2026-07-05 02:41:16,Initial prediction,Portugal,0.2964,0.2218,0.0934,0.0284
-20260705_024116,2026-07-05 02:41:16,Initial prediction,Morocco,1.0,0.3056,0.0964,0.021
-20260705_024116,2026-07-05 02:41:16,Initial prediction,Colombia,0.737,0.1726,0.0532,0.0192
-20260705_024116,2026-07-05 02:41:16,Initial prediction,Belgium,0.744,0.1488,0.053,0.0136
-20260705_024116,2026-07-05 02:41:16,Initial prediction,Mexico,0.2236,0.0484,0.012,0.0028
-20260705_024116,2026-07-05 02:41:16,Initial prediction,Norway,0.1568,0.0464,0.0102,0.0024
-20260705_024116,2026-07-05 02:41:16,Initial prediction,Switzerland,0.263,0.0476,0.0054,0.001
-20260705_024116,2026-07-05 02:41:16,Initial prediction,United States,0.256,0.0302,0.0076,0.0002
-20260705_024116,2026-07-05 02:41:16,Initial prediction,Egypt,0.084,0.0146,0.0016,0.0
+checkpoint_index,snapshot_id,snapshot_date,snapshot_label,snapshot_short_label,trigger_match_id,trigger_result,team,quarterfinal,semifinal,final,champion,champion_rank
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,Argentina,0.9146,0.769,0.4766,0.311,1
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,Spain,0.7138,0.6104,0.4019,0.2106,2
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,Brazil,0.8411,0.592,0.31,0.179,3
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,France,1.0,0.6881,0.3451,0.1409,4
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,England,0.7785,0.3114,0.1335,0.0675,5
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,Portugal,0.2862,0.2146,0.0916,0.0287,6
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,Morocco,1.0,0.3119,0.1039,0.0256,7
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,Colombia,0.7362,0.1705,0.0492,0.0172,8
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,Belgium,0.7192,0.1424,0.0501,0.0123,9
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,Mexico,0.2215,0.0547,0.0147,0.0036,10
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,Norway,0.1589,0.0419,0.0082,0.0015,11
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,Switzerland,0.2638,0.0466,0.0066,0.0012,12
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,United States,0.2808,0.0326,0.0074,0.0008,13
+0,initial,2026-07-05,Initial projection before the July 5 updates,Start,,,Egypt,0.0854,0.0139,0.0012,0.0001,14
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,Argentina,0.9235,0.7732,0.5614,0.3586,1
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,Spain,0.7102,0.6034,0.4118,0.2271,2
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,France,1.0,0.6979,0.3442,0.1631,3
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,England,0.7844,0.5919,0.255,0.1265,4
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,Portugal,0.2898,0.2138,0.0868,0.0329,5
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,Morocco,1.0,0.3021,0.0974,0.0248,6
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,Colombia,0.736,0.164,0.072,0.0243,7
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,Belgium,0.7248,0.1467,0.0528,0.0174,8
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,Norway,1.0,0.2762,0.0643,0.0125,9
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,Mexico,0.2156,0.1319,0.0307,0.0082,10
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,Switzerland,0.264,0.0489,0.0146,0.0026,11
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,United States,0.2752,0.0361,0.007,0.0019,12
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,Egypt,0.0765,0.0139,0.002,0.0001,13
+1,after_r16_3_left,2026-07-05,After Brazil 1-2 Norway,Jul 5: Norway,r16_3_left,Brazil 1-2 Norway,Brazil,0.0,0.0,0.0,0.0,14
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,Argentina,0.9188,0.7642,0.5331,0.3423,1
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,Spain,0.7091,0.6042,0.4026,0.216,2
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,France,1.0,0.6899,0.3513,0.1688,3
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,England,1.0,0.7594,0.3206,0.1595,4
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,Portugal,0.2909,0.2132,0.0885,0.0316,5
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,Morocco,1.0,0.3101,0.0992,0.0261,6
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,Colombia,0.7428,0.1715,0.0705,0.0253,7
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,Belgium,0.7181,0.1487,0.0523,0.0159,8
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,Norway,1.0,0.2406,0.0622,0.0112,9
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,Switzerland,0.2572,0.0478,0.0115,0.0018,10
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,United States,0.2819,0.0339,0.0061,0.0014,11
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,Egypt,0.0812,0.0165,0.0021,0.0001,12
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,Brazil,0.0,0.0,0.0,0.0,13
+2,after_r16_3_right,2026-07-05,After Mexico 2-3 England,Jul 5: England,r16_3_right,Mexico 2-3 England,Mexico,0.0,0.0,0.0,0.0,13
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,Spain,1.0,0.8565,0.5718,0.3214,1
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,Argentina,0.9138,0.764,0.5362,0.3198,2
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,England,1.0,0.7594,0.3199,0.1513,3
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,France,1.0,0.695,0.2998,0.1415,4
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,Morocco,1.0,0.305,0.0844,0.0211,5
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,Colombia,0.7397,0.1708,0.0659,0.0206,6
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,Belgium,0.7217,0.1142,0.0387,0.0106,7
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,Norway,1.0,0.2406,0.0627,0.0106,7
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,Switzerland,0.2603,0.051,0.0135,0.0023,9
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,United States,0.2783,0.0293,0.0053,0.0007,10
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,Egypt,0.0862,0.0142,0.0018,0.0001,11
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,Brazil,0.0,0.0,0.0,0.0,12
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,Mexico,0.0,0.0,0.0,0.0,12
+3,after_r16_2_left,2026-07-06,After Portugal 0-1 Spain,Jul 6: Spain,r16_2_left,Portugal 0-1 Spain,Portugal,0.0,0.0,0.0,0.0,12
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,Spain,1.0,0.8563,0.5761,0.3279,1
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,Argentina,0.9149,0.767,0.533,0.3178,2
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,England,1.0,0.7583,0.3267,0.1546,3
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,France,1.0,0.6892,0.2888,0.1311,4
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,Morocco,1.0,0.3108,0.0859,0.0227,5
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,Colombia,0.7407,0.171,0.0704,0.02,6
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,Belgium,1.0,0.1437,0.0492,0.0149,7
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,Norway,1.0,0.2417,0.055,0.009,8
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,Switzerland,0.2593,0.0464,0.0122,0.0017,9
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,Egypt,0.0851,0.0156,0.0027,0.0003,10
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,Brazil,0.0,0.0,0.0,0.0,11
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,Mexico,0.0,0.0,0.0,0.0,11
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,Portugal,0.0,0.0,0.0,0.0,11
+4,after_r16_2_right,2026-07-06,After United States 1-4 Belgium,Jul 6: Belgium,r16_2_right,United States 1-4 Belgium,United States,0.0,0.0,0.0,0.0,11
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,Spain,1.0,0.8532,0.5745,0.329,1
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,Argentina,1.0,0.827,0.5703,0.3193,2
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,England,1.0,0.7561,0.3039,0.1462,3
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,France,1.0,0.6961,0.2945,0.1418,4
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,Morocco,1.0,0.3039,0.0813,0.0186,5
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,Colombia,0.736,0.133,0.0526,0.0163,6
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,Belgium,1.0,0.1468,0.0497,0.0162,7
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,Norway,1.0,0.2439,0.0608,0.0103,8
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,Switzerland,0.264,0.04,0.0124,0.0023,9
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,Brazil,0.0,0.0,0.0,0.0,10
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,Egypt,0.0,0.0,0.0,0.0,10
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,Mexico,0.0,0.0,0.0,0.0,10
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,Portugal,0.0,0.0,0.0,0.0,10
+5,after_r16_4_left,2026-07-07,After Argentina 3-2 Egypt,Jul 7: Argentina,r16_4_left,Argentina 3-2 Egypt,United States,0.0,0.0,0.0,0.0,10
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,Argentina,1.0,0.8625,0.594,0.3351,1
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,Spain,1.0,0.8516,0.5702,0.3254,2
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,England,1.0,0.7565,0.3011,0.1462,3
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,France,1.0,0.6909,0.2929,0.1412,4
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,Morocco,1.0,0.3091,0.0842,0.0202,5
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,Belgium,1.0,0.1484,0.0527,0.0152,6
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,Norway,1.0,0.2435,0.0687,0.0108,7
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,Switzerland,1.0,0.1375,0.0362,0.0059,8
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,Brazil,0.0,0.0,0.0,0.0,9
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,Colombia,0.0,0.0,0.0,0.0,9
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,Egypt,0.0,0.0,0.0,0.0,9
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,Mexico,0.0,0.0,0.0,0.0,9
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,Portugal,0.0,0.0,0.0,0.0,9
+6,after_r16_4_right,2026-07-07,After Switzerland advanced after Switzerland 0-0 Colombia,Jul 7: Switzerland,r16_4_right,Switzerland advanced after Switzerland 0-0 Colombia,United States,0.0,0.0,0.0,0.0,9
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,Argentina,1.0,0.867,0.5942,0.3337,1
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,Spain,1.0,0.8472,0.543,0.3078,2
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,France,1.0,1.0,0.4165,0.1893,3
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,England,1.0,0.759,0.308,0.1455,4
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,Belgium,1.0,0.1528,0.0405,0.0122,5
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,Norway,1.0,0.241,0.0647,0.0076,6
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,Switzerland,1.0,0.133,0.0331,0.0039,7
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,Brazil,0.0,0.0,0.0,0.0,8
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,Colombia,0.0,0.0,0.0,0.0,8
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,Egypt,0.0,0.0,0.0,0.0,8
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,Mexico,0.0,0.0,0.0,0.0,8
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,Morocco,1.0,0.0,0.0,0.0,8
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,Portugal,0.0,0.0,0.0,0.0,8
+7,after_qf_1,2026-07-09,After Morocco 0-2 France,Jul 9: France,qf_1,Morocco 0-2 France,United States,0.0,0.0,0.0,0.0,8
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,Spain,1.0,1.0,0.6371,0.3539,1
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,Argentina,1.0,0.8614,0.5827,0.3211,2
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,France,1.0,1.0,0.3629,0.1699,3
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,England,1.0,0.7562,0.31,0.1428,4
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,Norway,1.0,0.2438,0.0728,0.0077,5
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,Switzerland,1.0,0.1386,0.0345,0.0046,6
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,Belgium,1.0,0.0,0.0,0.0,7
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,Brazil,0.0,0.0,0.0,0.0,7
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,Colombia,0.0,0.0,0.0,0.0,7
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,Egypt,0.0,0.0,0.0,0.0,7
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,Mexico,0.0,0.0,0.0,0.0,7
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,Morocco,1.0,0.0,0.0,0.0,7
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,Portugal,0.0,0.0,0.0,0.0,7
+8,after_qf_2,2026-07-10,After Spain 2-1 Belgium,Jul 10: Spain,qf_2,Spain 2-1 Belgium,United States,0.0,0.0,0.0,0.0,7
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,Spain,1.0,1.0,0.6362,0.3357,1
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,Argentina,1.0,0.8637,0.541,0.2995,2
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,England,1.0,1.0,0.4301,0.196,3
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,France,1.0,1.0,0.3638,0.165,4
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,Switzerland,1.0,0.1363,0.0289,0.0038,5
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,Belgium,1.0,0.0,0.0,0.0,6
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,Brazil,0.0,0.0,0.0,0.0,6
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,Colombia,0.0,0.0,0.0,0.0,6
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,Egypt,0.0,0.0,0.0,0.0,6
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,Mexico,0.0,0.0,0.0,0.0,6
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,Morocco,1.0,0.0,0.0,0.0,6
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,Norway,1.0,0.0,0.0,0.0,6
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,Portugal,0.0,0.0,0.0,0.0,6
+9,after_qf_3,2026-07-11,After Norway 1-2 England,Jul 11: England,qf_3,Norway 1-2 England,United States,0.0,0.0,0.0,0.0,6
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,Spain,1.0,1.0,0.6383,0.3466,1
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,Argentina,1.0,1.0,0.6411,0.3333,2
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,England,1.0,1.0,0.3589,0.1607,3
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,France,1.0,1.0,0.3617,0.1594,4
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,Belgium,1.0,0.0,0.0,0.0,5
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,Brazil,0.0,0.0,0.0,0.0,5
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,Colombia,0.0,0.0,0.0,0.0,5
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,Egypt,0.0,0.0,0.0,0.0,5
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,Mexico,0.0,0.0,0.0,0.0,5
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,Morocco,1.0,0.0,0.0,0.0,5
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,Norway,1.0,0.0,0.0,0.0,5
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,Portugal,0.0,0.0,0.0,0.0,5
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,Switzerland,1.0,0.0,0.0,0.0,5
+10,after_qf_4,2026-07-11,After Argentina 3-1 Switzerland,Jul 11: Argentina,qf_4,Argentina 3-1 Switzerland,United States,0.0,0.0,0.0,0.0,5
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,Spain,1.0,1.0,1.0,0.5568,1
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,Argentina,1.0,1.0,0.6422,0.2762,2
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,England,1.0,1.0,0.3578,0.167,3
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,Belgium,1.0,0.0,0.0,0.0,4
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,Brazil,0.0,0.0,0.0,0.0,4
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,Colombia,0.0,0.0,0.0,0.0,4
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,Egypt,0.0,0.0,0.0,0.0,4
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,France,1.0,1.0,0.0,0.0,4
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,Mexico,0.0,0.0,0.0,0.0,4
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,Morocco,1.0,0.0,0.0,0.0,4
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,Norway,1.0,0.0,0.0,0.0,4
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,Portugal,0.0,0.0,0.0,0.0,4
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,Switzerland,1.0,0.0,0.0,0.0,4
+11,after_sf_1,2026-07-14,After France 0-2 Spain,Jul 14: Spain,sf_1,France 0-2 Spain,United States,0.0,0.0,0.0,0.0,4
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,Spain,1.0,1.0,1.0,0.5493,1
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,Argentina,1.0,1.0,1.0,0.4507,2
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,Belgium,1.0,0.0,0.0,0.0,3
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,Brazil,0.0,0.0,0.0,0.0,3
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,Colombia,0.0,0.0,0.0,0.0,3
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,Egypt,0.0,0.0,0.0,0.0,3
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,England,1.0,1.0,0.0,0.0,3
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,France,1.0,1.0,0.0,0.0,3
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,Mexico,0.0,0.0,0.0,0.0,3
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,Morocco,1.0,0.0,0.0,0.0,3
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,Norway,1.0,0.0,0.0,0.0,3
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,Portugal,0.0,0.0,0.0,0.0,3
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,Switzerland,1.0,0.0,0.0,0.0,3
+12,after_sf_2,2026-07-15,After England 1-2 Argentina,Jul 15: Argentina,sf_2,England 1-2 Argentina,United States,0.0,0.0,0.0,0.0,3
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,Spain,1.0,1.0,1.0,1.0,1
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,Argentina,1.0,1.0,1.0,0.0,2
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,Belgium,1.0,0.0,0.0,0.0,2
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,Brazil,0.0,0.0,0.0,0.0,2
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,Colombia,0.0,0.0,0.0,0.0,2
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,Egypt,0.0,0.0,0.0,0.0,2
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,England,1.0,1.0,0.0,0.0,2
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,France,1.0,1.0,0.0,0.0,2
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,Mexico,0.0,0.0,0.0,0.0,2
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,Morocco,1.0,0.0,0.0,0.0,2
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,Norway,1.0,0.0,0.0,0.0,2
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,Portugal,0.0,0.0,0.0,0.0,2
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,Switzerland,1.0,0.0,0.0,0.0,2
+13,after_final,2026-07-19,After Spain 1-0 Argentina,Jul 19: Spain,final,Spain 1-0 Argentina,United States,0.0,0.0,0.0,0.0,2
