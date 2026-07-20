@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import joblib
 import numpy as np
@@ -13,14 +13,8 @@ import streamlit as st
 
 
 # ============================================================
-# App Configuration
+# Project Paths and Constants
 # ============================================================
-
-st.set_page_config(
-    page_title="FIFA World Cup ML Predictor",
-    page_icon="⚽",
-    layout="wide",
-)
 
 ROOT = Path(__file__).resolve().parent
 
@@ -33,18 +27,50 @@ MATCH_DATA_CANDIDATES = [
 ]
 
 OFFICIAL_RESULTS_PATH = ROOT / "data" / "app" / "official_results.json"
+TOURNAMENT_SUMMARY_PATH = ROOT / "data" / "app" / "tournament_summary.json"
 PREDICTION_HISTORY_PATH = ROOT / "data" / "app" / "prediction_history.csv"
+SNAPSHOT_SUMMARY_PATH = (
+    ROOT / "data" / "app" / "prediction_snapshot_summary.csv"
+)
+FINAL_MODEL_REPORT_PATH = ROOT / "data" / "app" / "final_model_report.json"
 
-DEFAULT_STATE = {
+# The history starts after the two July 4 Round of 16 matches that produced
+# Morocco vs France. Any processed rows on or after this date are excluded
+# from the base feature snapshot so replaying old checkpoints cannot leak
+# information from later tournament results.
+TRACKING_START_DATE = pd.Timestamp("2026-07-05")
+ACTUAL_CHAMPION = "Spain"
+
+DEFAULT_STATE: dict[str, list[dict[str, Any]]] = {
     "completed_matches": []
 }
+
+MODEL_RESULTS = pd.DataFrame(
+    [
+        {
+            "Model": "Gradient Boosting",
+            "Accuracy": 0.603610,
+            "Log Loss": 0.872078,
+        },
+        {
+            "Model": "Random Forest",
+            "Accuracy": 0.580559,
+            "Log Loss": 0.897091,
+        },
+        {
+            "Model": "Logistic Regression",
+            "Accuracy": 0.581168,
+            "Log Loss": 0.899839,
+        },
+    ]
+)
 
 
 # ============================================================
 # Bracket Definition
 # ============================================================
 
-BRACKET_MATCHES = [
+BRACKET_MATCHES: list[dict[str, Any]] = [
     {
         "id": "r16_2_left",
         "round": "round_of_16",
@@ -159,38 +185,41 @@ INITIAL_TEAMS = sorted(
 
 
 # ============================================================
-# Loading Helpers
+# File Loading Helpers
 # ============================================================
 
-def find_existing_path(paths: list[Path]) -> Path | None:
+
+def find_existing_path(paths: Iterable[Path]) -> Path | None:
     for path in paths:
         if path.exists():
             return path
-
     return None
 
 
-@st.cache_resource
-def load_model_and_features() -> tuple[Any, list[str]]:
-    if not MODEL_PATH.exists():
+def load_model_and_features(
+    model_path: Path = MODEL_PATH,
+    features_path: Path = FEATURES_PATH,
+) -> tuple[Any, list[str]]:
+    if not model_path.exists():
         raise FileNotFoundError(
             "Missing model file: models/best_match_prediction_model.pkl"
         )
 
-    if not FEATURES_PATH.exists():
+    if not features_path.exists():
         raise FileNotFoundError(
             "Missing feature file: models/model_features.pkl"
         )
 
-    model = joblib.load(MODEL_PATH)
-    features = joblib.load(FEATURES_PATH)
+    model = joblib.load(model_path)
+    features = list(joblib.load(features_path))
 
     return model, features
 
 
-@st.cache_data
-def load_matches() -> pd.DataFrame:
-    match_path = find_existing_path(MATCH_DATA_CANDIDATES)
+def load_matches(
+    candidate_paths: Iterable[Path] = MATCH_DATA_CANDIDATES,
+) -> pd.DataFrame:
+    match_path = find_existing_path(candidate_paths)
 
     if match_path is None:
         raise FileNotFoundError(
@@ -200,64 +229,64 @@ def load_matches() -> pd.DataFrame:
         )
 
     matches = pd.read_csv(match_path)
-    matches["date"] = pd.to_datetime(matches["date"])
 
+    required_columns = {
+        "date",
+        "home_team",
+        "away_team",
+        "home_score",
+        "away_score",
+    }
+    missing_columns = required_columns - set(matches.columns)
+
+    if missing_columns:
+        raise ValueError(
+            "Processed match data is missing required columns: "
+            f"{sorted(missing_columns)}"
+        )
+
+    matches["date"] = pd.to_datetime(matches["date"], errors="raise")
     return matches
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise FileNotFoundError(f"Missing JSON file: {path}")
+
+    try:
+        with path.open("r", encoding="utf-8") as file:
+            value = json.load(file)
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            f"Invalid JSON in {path.name} at line {error.lineno}, "
+            f"column {error.colno}: {error.msg}"
+        ) from error
+
+    if not isinstance(value, dict):
+        raise ValueError(f"{path.name} must contain a JSON object.")
+
+    return value
 
 
 def get_clean_default_state() -> dict[str, Any]:
     return copy.deepcopy(DEFAULT_STATE)
 
 
-def load_official_state() -> dict[str, Any]:
-    if not OFFICIAL_RESULTS_PATH.exists():
+def load_official_state(
+    path: Path = OFFICIAL_RESULTS_PATH,
+) -> dict[str, Any]:
+    if not path.exists():
         return get_clean_default_state()
 
-    with open(OFFICIAL_RESULTS_PATH, "r", encoding="utf-8") as file:
-        state = json.load(file)
-
-    if "completed_matches" not in state:
-        state["completed_matches"] = []
-
+    state = load_json(path)
+    state.setdefault("completed_matches", [])
     validate_state(state)
-
     return state
-
-
-def load_prediction_history() -> pd.DataFrame:
-    if not PREDICTION_HISTORY_PATH.exists():
-        return pd.DataFrame(
-            columns=[
-                "snapshot_label",
-                "team",
-                "quarterfinal",
-                "semifinal",
-                "final",
-                "champion",
-            ]
-        )
-
-    return pd.read_csv(PREDICTION_HISTORY_PATH)
 
 
 # ============================================================
 # Bracket and State Helpers
 # ============================================================
-
-def completed_matches_by_id(state: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    completed = {}
-
-    for match in state.get("completed_matches", []):
-        completed[match["match_id"]] = match
-
-    return completed
-
-
-def state_signature(state: dict[str, Any]) -> str:
-    return json.dumps(
-        state.get("completed_matches", []),
-        sort_keys=True,
-    )
 
 
 def get_match_by_id(match_id: str) -> dict[str, Any]:
@@ -265,7 +294,20 @@ def get_match_by_id(match_id: str) -> dict[str, Any]:
         if match["id"] == match_id:
             return match
 
-    raise ValueError(f"Unknown match id: {match_id}")
+    raise ValueError(f"Unknown match_id: {match_id}")
+
+
+def completed_matches_by_id(
+    state: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    return {
+        str(match["match_id"]): match
+        for match in state.get("completed_matches", [])
+    }
+
+
+def state_signature(state: dict[str, Any]) -> str:
+    return json.dumps(state, sort_keys=True, separators=(",", ":"))
 
 
 def resolve_team_from_source(
@@ -280,7 +322,7 @@ def resolve_team_from_source(
         return simulated_winners[source_id]
 
     if source_id in completed:
-        return completed[source_id]["winner"]
+        return str(completed[source_id]["winner"])
 
     return None
 
@@ -290,9 +332,7 @@ def resolve_match_teams(
     state: dict[str, Any],
     simulated_winners: dict[str, str] | None = None,
 ) -> tuple[str | None, str | None]:
-    if simulated_winners is None:
-        simulated_winners = {}
-
+    simulated_winners = simulated_winners or {}
     completed = completed_matches_by_id(state)
 
     home_team = match.get("home_team")
@@ -315,30 +355,215 @@ def resolve_match_teams(
     return home_team, away_team
 
 
+def validate_state(state: dict[str, Any]) -> None:
+    if not isinstance(state, dict):
+        raise ValueError("The official results file must be a JSON object.")
+
+    records = state.get("completed_matches")
+    if not isinstance(records, list):
+        raise ValueError(
+            'The official results file must contain a "completed_matches" list.'
+        )
+
+    required_fields = {
+        "match_id",
+        "round",
+        "date",
+        "home_team",
+        "away_team",
+        "home_score",
+        "away_score",
+        "winner",
+    }
+
+    seen_match_ids: set[str] = set()
+    validated_records: list[dict[str, Any]] = []
+    previous_date: pd.Timestamp | None = None
+
+    for record_number, record in enumerate(records, start=1):
+        if not isinstance(record, dict):
+            raise ValueError(
+                f"Completed match #{record_number} must be a JSON object."
+            )
+
+        missing_fields = required_fields - set(record)
+        if missing_fields:
+            raise ValueError(
+                f"Completed match #{record_number} is missing fields: "
+                f"{', '.join(sorted(missing_fields))}."
+            )
+
+        match_id = str(record["match_id"])
+
+        if match_id in seen_match_ids:
+            raise ValueError(f'Duplicate result for match_id "{match_id}".')
+
+        definition = get_match_by_id(match_id)
+        prior_state = {
+            "completed_matches": copy.deepcopy(validated_records)
+        }
+        expected_home, expected_away = resolve_match_teams(
+            definition,
+            prior_state,
+        )
+
+        if expected_home is None or expected_away is None:
+            raise ValueError(
+                f'Match "{match_id}" cannot be recorded yet because an '
+                "earlier result needed to resolve its teams is missing or "
+                "appears later in the file."
+            )
+
+        if record["home_team"] != expected_home:
+            raise ValueError(
+                f'Match "{match_id}" has the wrong home team. '
+                f'Expected "{expected_home}", got "{record["home_team"]}".'
+            )
+
+        if record["away_team"] != expected_away:
+            raise ValueError(
+                f'Match "{match_id}" has the wrong away team. '
+                f'Expected "{expected_away}", got "{record["away_team"]}".'
+            )
+
+        if record["round"] != definition["round"]:
+            raise ValueError(
+                f'Match "{match_id}" has the wrong round. '
+                f'Expected "{definition["round"]}", got '
+                f'"{record["round"]}".'
+            )
+
+        try:
+            match_date = pd.Timestamp(record["date"]).normalize()
+        except Exception as error:
+            raise ValueError(
+                f'Match "{match_id}" has an invalid date: '
+                f'{record["date"]}.'
+            ) from error
+
+        expected_date = pd.Timestamp(definition["date"]).normalize()
+        if match_date != expected_date:
+            raise ValueError(
+                f'Match "{match_id}" has the wrong date. '
+                f'Expected {expected_date.date()}, got {match_date.date()}.'
+            )
+
+        if previous_date is not None and match_date < previous_date:
+            raise ValueError(
+                "Official results must be listed in chronological order."
+            )
+
+        try:
+            home_score = int(record["home_score"])
+            away_score = int(record["away_score"])
+        except (TypeError, ValueError) as error:
+            raise ValueError(
+                f'Match "{match_id}" scores must be whole numbers.'
+            ) from error
+
+        if not 0 <= home_score <= 20 or not 0 <= away_score <= 20:
+            raise ValueError(
+                f'Match "{match_id}" scores must be between 0 and 20.'
+            )
+
+        winner = str(record["winner"])
+        valid_winners = {expected_home, expected_away}
+
+        if winner not in valid_winners:
+            raise ValueError(
+                f'Match "{match_id}" winner must be either '
+                f'"{expected_home}" or "{expected_away}".'
+            )
+
+        if home_score > away_score and winner != expected_home:
+            raise ValueError(
+                f'Match "{match_id}" winner does not match the score.'
+            )
+
+        if away_score > home_score and winner != expected_away:
+            raise ValueError(
+                f'Match "{match_id}" winner does not match the score.'
+            )
+
+        validated_records.append(
+            {
+                "match_id": match_id,
+                "round": definition["round"],
+                "date": str(match_date.date()),
+                "home_team": expected_home,
+                "away_team": expected_away,
+                "home_score": home_score,
+                "away_score": away_score,
+                "winner": winner,
+            }
+        )
+        seen_match_ids.add(match_id)
+        previous_date = match_date
+
+
+def get_state_at_checkpoint(
+    official_state: dict[str, Any],
+    checkpoint_index: int,
+) -> dict[str, Any]:
+    records = official_state.get("completed_matches", [])
+
+    if not 0 <= checkpoint_index <= len(records):
+        raise ValueError(
+            f"checkpoint_index must be between 0 and {len(records)}."
+        )
+
+    return {
+        "completed_matches": copy.deepcopy(records[:checkpoint_index])
+    }
+
+
 def get_available_matches(
     state: dict[str, Any],
 ) -> list[tuple[dict[str, Any], str, str]]:
     completed = completed_matches_by_id(state)
-    simulated_winners = {}
-    available = []
+    available: list[tuple[dict[str, Any], str, str]] = []
 
     for match in BRACKET_MATCHES:
-        match_id = match["id"]
-
-        if match_id in completed:
-            simulated_winners[match_id] = completed[match_id]["winner"]
+        if match["id"] in completed:
             continue
 
-        home_team, away_team = resolve_match_teams(
-            match,
-            state,
-            simulated_winners,
-        )
-
+        home_team, away_team = resolve_match_teams(match, state)
         if home_team is not None and away_team is not None:
             available.append((match, home_team, away_team))
 
     return available
+
+
+def add_completed_match_to_state(
+    state: dict[str, Any],
+    match: dict[str, Any],
+    home_team: str,
+    away_team: str,
+    match_date: str,
+    home_score: int,
+    away_score: int,
+    winner: str,
+) -> dict[str, Any]:
+    if match["id"] in completed_matches_by_id(state):
+        raise ValueError("That match is already completed in this scenario.")
+
+    updated_state = copy.deepcopy(state)
+    updated_state.setdefault("completed_matches", [])
+    updated_state["completed_matches"].append(
+        {
+            "match_id": match["id"],
+            "round": match["round"],
+            "date": match_date,
+            "home_team": home_team,
+            "away_team": away_team,
+            "home_score": int(home_score),
+            "away_score": int(away_score),
+            "winner": winner,
+        }
+    )
+
+    validate_state(updated_state)
+    return updated_state
 
 
 def format_round_name(round_name: str) -> str:
@@ -356,128 +581,22 @@ def format_match_label(
     )
 
 
-def validate_state(state: dict[str, Any]) -> None:
-    seen_match_ids = set()
-    completed = {}
-
-    for match in BRACKET_MATCHES:
-        match_id = match["id"]
-
-        matching_records = [
-            record
-            for record in state.get("completed_matches", [])
-            if record["match_id"] == match_id
-        ]
-
-        if len(matching_records) == 0:
-            continue
-
-        if len(matching_records) > 1:
-            raise ValueError(f"Duplicate result for match_id: {match_id}")
-
-        record = matching_records[0]
-
-        if match_id in seen_match_ids:
-            raise ValueError(f"Duplicate result for match_id: {match_id}")
-
-        seen_match_ids.add(match_id)
-
-        home_team, away_team = resolve_match_teams(
-            match,
-            {"completed_matches": list(completed.values())},
-            {},
-        )
-
-        if home_team is None:
-            home_team = match.get("home_team")
-
-        if away_team is None:
-            away_team = match.get("away_team")
-
-        if home_team is not None and record["home_team"] != home_team:
-            raise ValueError(
-                f"{match_id} has wrong home_team. "
-                f"Expected {home_team}, got {record['home_team']}."
-            )
-
-        if away_team is not None and record["away_team"] != away_team:
-            raise ValueError(
-                f"{match_id} has wrong away_team. "
-                f"Expected {away_team}, got {record['away_team']}."
-            )
-
-        home_score = int(record["home_score"])
-        away_score = int(record["away_score"])
-        winner = record["winner"]
-
-        if home_score < 0 or away_score < 0:
-            raise ValueError(f"{match_id} has a negative score.")
-
-        if winner not in {record["home_team"], record["away_team"]}:
-            raise ValueError(
-                f"{match_id} winner must be one of the two teams."
-            )
-
-        if home_score > away_score and winner != record["home_team"]:
-            raise ValueError(
-                f"{match_id} winner does not match the score."
-            )
-
-        if away_score > home_score and winner != record["away_team"]:
-            raise ValueError(
-                f"{match_id} winner does not match the score."
-            )
-
-        completed[match_id] = record
-
-
-def add_completed_match_to_state(
-    state: dict[str, Any],
-    match: dict[str, Any],
-    home_team: str,
-    away_team: str,
-    match_date: str,
-    home_score: int,
-    away_score: int,
-    winner: str,
-) -> dict[str, Any]:
-    updated_state = copy.deepcopy(state)
-
-    completed = completed_matches_by_id(updated_state)
-
-    if match["id"] in completed:
-        raise ValueError("That match has already been completed.")
-
-    record = {
-        "match_id": match["id"],
-        "round": match["round"],
-        "date": match_date,
-        "home_team": home_team,
-        "away_team": away_team,
-        "home_score": int(home_score),
-        "away_score": int(away_score),
-        "winner": winner,
-    }
-
-    updated_state["completed_matches"].append(record)
-
-    validate_state(updated_state)
-
-    return updated_state
-
-
 # ============================================================
-# Feature Engineering Helpers
+# Time-Safe Feature Engineering
 # ============================================================
+
+
+def get_base_matches(matches: pd.DataFrame) -> pd.DataFrame:
+    """Return only rows known before the first archived checkpoint."""
+    return matches[matches["date"] < TRACKING_START_DATE].copy()
+
 
 def safe_number(value: Any, default: float) -> float:
     try:
         if pd.isna(value):
             return float(default)
-
         return float(value)
-
-    except Exception:
+    except (TypeError, ValueError):
         return float(default)
 
 
@@ -489,7 +608,6 @@ def first_existing_value(
     for column in possible_columns:
         if column in row.index and not pd.isna(row[column]):
             return safe_number(row[column], default)
-
     return float(default)
 
 
@@ -502,7 +620,7 @@ def get_latest_team_row(
         | (matches["away_team"] == team)
     ].sort_values("date")
 
-    if len(team_matches) == 0:
+    if team_matches.empty:
         return None
 
     return team_matches.iloc[-1]
@@ -529,44 +647,53 @@ def get_base_team_profile(
             ["home_elo_before", "home_elo", "home_rating"],
             1500.0,
         )
-
         attack = first_existing_value(
             row,
-            ["home_attack_before", "home_attack", "home_attack_rating"],
+            [
+                "home_attack_before",
+                "home_attack",
+                "home_attack_rating",
+            ],
             1.0,
         )
-
         defense = first_existing_value(
             row,
-            ["home_defense_before", "home_defense", "home_defense_rating"],
+            [
+                "home_defense_before",
+                "home_defense",
+                "home_defense_rating",
+            ],
             1.0,
         )
-
         streak = first_existing_value(
             row,
             ["home_streak", "home_current_streak"],
             0.0,
         )
-
     else:
         elo = first_existing_value(
             row,
             ["away_elo_before", "away_elo", "away_rating"],
             1500.0,
         )
-
         attack = first_existing_value(
             row,
-            ["away_attack_before", "away_attack", "away_attack_rating"],
+            [
+                "away_attack_before",
+                "away_attack",
+                "away_attack_rating",
+            ],
             1.0,
         )
-
         defense = first_existing_value(
             row,
-            ["away_defense_before", "away_defense", "away_defense_rating"],
+            [
+                "away_defense_before",
+                "away_defense",
+                "away_defense_rating",
+            ],
             1.0,
         )
-
         streak = first_existing_value(
             row,
             ["away_streak", "away_current_streak"],
@@ -586,9 +713,13 @@ def get_all_live_teams(state: dict[str, Any]) -> list[str]:
     teams = set(INITIAL_TEAMS)
 
     for completed_match in state.get("completed_matches", []):
-        teams.add(completed_match["home_team"])
-        teams.add(completed_match["away_team"])
-        teams.add(completed_match["winner"])
+        teams.update(
+            {
+                completed_match["home_team"],
+                completed_match["away_team"],
+                completed_match["winner"],
+            }
+        )
 
     return sorted(teams)
 
@@ -597,21 +728,23 @@ def build_live_profiles(
     matches: pd.DataFrame,
     state: dict[str, Any],
 ) -> dict[str, dict[str, Any]]:
-    teams = get_all_live_teams(state)
-
+    base_matches = get_base_matches(matches)
     profiles = {
-        team: get_base_team_profile(matches, team)
-        for team in teams
+        team: get_base_team_profile(base_matches, team)
+        for team in get_all_live_teams(state)
     }
 
     completed_matches = sorted(
         state.get("completed_matches", []),
-        key=lambda match: match["date"],
+        key=lambda match: (
+            pd.Timestamp(match["date"]),
+            BRACKET_MATCHES.index(get_match_by_id(match["match_id"])),
+        ),
     )
 
     for completed_match in completed_matches:
-        home_team = completed_match["home_team"]
-        away_team = completed_match["away_team"]
+        home_team = str(completed_match["home_team"])
+        away_team = str(completed_match["away_team"])
         home_score = int(completed_match["home_score"])
         away_score = int(completed_match["away_score"])
         match_date = pd.Timestamp(completed_match["date"])
@@ -619,37 +752,35 @@ def build_live_profiles(
         home_profile = profiles[home_team]
         away_profile = profiles[away_team]
 
-        home_elo = home_profile["elo"]
-        away_elo = away_profile["elo"]
+        home_elo = float(home_profile["elo"])
+        away_elo = float(away_profile["elo"])
 
         expected_home = 1 / (1 + 10 ** (-(home_elo - away_elo) / 400))
 
         if home_score > away_score:
             actual_home = 1.0
-            home_streak = 1
-            away_streak = -1
+            home_streak = 1.0
+            away_streak = -1.0
         elif home_score < away_score:
             actual_home = 0.0
-            home_streak = -1
-            away_streak = 1
+            home_streak = -1.0
+            away_streak = 1.0
         else:
+            # A penalty shootout winner does not change the tied match score.
             actual_home = 0.5
-            home_streak = 0
-            away_streak = 0
+            home_streak = 0.0
+            away_streak = 0.0
 
-        k_factor = 30
-
+        k_factor = 30.0
         home_profile["elo"] = home_elo + k_factor * (
             actual_home - expected_home
         )
-
         away_profile["elo"] = away_elo + k_factor * (
             (1 - actual_home) - (1 - expected_home)
         )
 
         home_profile["streak"] = home_streak
         away_profile["streak"] = away_streak
-
         home_profile["last_match_date"] = match_date
         away_profile["last_match_date"] = match_date
 
@@ -662,12 +793,13 @@ def get_recent_form_for_team(
     team: str,
     n_matches: int = 5,
 ) -> dict[str, float]:
-    records = []
+    base_matches = get_base_matches(matches)
+    records: list[dict[str, Any]] = []
 
-    historical_matches = matches[
-        (matches["home_team"] == team)
-        | (matches["away_team"] == team)
-    ].copy()
+    historical_matches = base_matches[
+        (base_matches["home_team"] == team)
+        | (base_matches["away_team"] == team)
+    ]
 
     for _, match in historical_matches.iterrows():
         if pd.isna(match["home_score"]) or pd.isna(match["away_score"]):
@@ -692,11 +824,9 @@ def get_recent_form_for_team(
         if completed_match["home_team"] == team:
             goals_for = int(completed_match["home_score"])
             goals_against = int(completed_match["away_score"])
-
         elif completed_match["away_team"] == team:
             goals_for = int(completed_match["away_score"])
             goals_against = int(completed_match["home_score"])
-
         else:
             continue
 
@@ -708,10 +838,12 @@ def get_recent_form_for_team(
             }
         )
 
-    records = sorted(records, key=lambda record: record["date"])
-    recent_records = records[-n_matches:]
+    recent_records = sorted(
+        records,
+        key=lambda record: record["date"],
+    )[-n_matches:]
 
-    if len(recent_records) == 0:
+    if not recent_records:
         return {
             "win_rate": 0.0,
             "goals_for": 0.0,
@@ -719,21 +851,18 @@ def get_recent_form_for_team(
             "goal_difference": 0.0,
         }
 
-    wins = 0
-    goals_for_total = 0
-    goals_against_total = 0
-
-    for record in recent_records:
-        goals_for = record["goals_for"]
-        goals_against = record["goals_against"]
-
-        goals_for_total += goals_for
-        goals_against_total += goals_against
-
-        if goals_for > goals_against:
-            wins += 1
-
     games = len(recent_records)
+    wins = sum(
+        1
+        for record in recent_records
+        if record["goals_for"] > record["goals_against"]
+    )
+    goals_for_total = sum(
+        record["goals_for"] for record in recent_records
+    )
+    goals_against_total = sum(
+        record["goals_against"] for record in recent_records
+    )
 
     return {
         "win_rate": wins / games,
@@ -749,11 +878,9 @@ def build_recent_forms(
     matches: pd.DataFrame,
     state: dict[str, Any],
 ) -> dict[str, dict[str, float]]:
-    teams = get_all_live_teams(state)
-
     return {
         team: get_recent_form_for_team(matches, state, team)
-        for team in teams
+        for team in get_all_live_teams(state)
     }
 
 
@@ -762,14 +889,15 @@ def get_head_to_head_difference(
     home_team: str,
     away_team: str,
 ) -> int:
-    previous_matches = matches[
+    base_matches = get_base_matches(matches)
+    previous_matches = base_matches[
         (
-            (matches["home_team"] == home_team)
-            & (matches["away_team"] == away_team)
+            (base_matches["home_team"] == home_team)
+            & (base_matches["away_team"] == away_team)
         )
         | (
-            (matches["home_team"] == away_team)
-            & (matches["away_team"] == home_team)
+            (base_matches["home_team"] == away_team)
+            & (base_matches["away_team"] == home_team)
         )
     ]
 
@@ -805,58 +933,39 @@ def build_live_match_features(
     recent_forms: dict[str, dict[str, float]],
     neutral: bool = True,
 ) -> pd.DataFrame:
-    home_profile = profiles.get(
-        home_team,
-        {
-            "elo": 1500.0,
-            "attack": 1.0,
-            "defense": 1.0,
-            "streak": 0.0,
-            "last_match_date": pd.Timestamp("2026-06-01"),
-        },
-    )
+    default_profile = {
+        "elo": 1500.0,
+        "attack": 1.0,
+        "defense": 1.0,
+        "streak": 0.0,
+        "last_match_date": pd.Timestamp("2026-06-01"),
+    }
+    default_form = {
+        "win_rate": 0.0,
+        "goals_for": 0.0,
+        "goals_against": 0.0,
+        "goal_difference": 0.0,
+    }
 
-    away_profile = profiles.get(
-        away_team,
-        {
-            "elo": 1500.0,
-            "attack": 1.0,
-            "defense": 1.0,
-            "streak": 0.0,
-            "last_match_date": pd.Timestamp("2026-06-01"),
-        },
-    )
-
-    home_form = recent_forms.get(
-        home_team,
-        {
-            "win_rate": 0.0,
-            "goals_for": 0.0,
-            "goals_against": 0.0,
-            "goal_difference": 0.0,
-        },
-    )
-
-    away_form = recent_forms.get(
-        away_team,
-        {
-            "win_rate": 0.0,
-            "goals_for": 0.0,
-            "goals_against": 0.0,
-            "goal_difference": 0.0,
-        },
-    )
+    home_profile = profiles.get(home_team, default_profile)
+    away_profile = profiles.get(away_team, default_profile)
+    home_form = recent_forms.get(home_team, default_form)
+    away_form = recent_forms.get(away_team, default_form)
 
     home_rest_days = (
-        pd.Timestamp(match_date) - home_profile["last_match_date"]
+        pd.Timestamp(match_date)
+        - pd.Timestamp(home_profile["last_match_date"])
     ).days
-
     away_rest_days = (
-        pd.Timestamp(match_date) - away_profile["last_match_date"]
+        pd.Timestamp(match_date)
+        - pd.Timestamp(away_profile["last_match_date"])
     ).days
 
     row = {
-        "elo_difference": home_profile["elo"] - away_profile["elo"],
+        "elo_difference": (
+            float(home_profile["elo"])
+            - float(away_profile["elo"])
+        ),
         "home_advantage": 0 if neutral else 1,
         "recent_win_rate_difference": (
             home_form["win_rate"] - away_form["win_rate"]
@@ -868,11 +977,13 @@ def build_live_match_features(
             home_form["goals_against"] - away_form["goals_against"]
         ),
         "recent_goal_difference_difference": (
-            home_form["goal_difference"] - away_form["goal_difference"]
+            home_form["goal_difference"]
+            - away_form["goal_difference"]
         ),
         "rest_days_difference": home_rest_days - away_rest_days,
         "streak_difference": (
-            home_profile["streak"] - away_profile["streak"]
+            float(home_profile["streak"])
+            - float(away_profile["streak"])
         ),
         "is_world_cup": 1,
         "is_qualification": 0,
@@ -884,41 +995,31 @@ def build_live_match_features(
             away_team,
         ),
         "attack_rating_difference": (
-            home_profile["attack"] - away_profile["attack"]
+            float(home_profile["attack"])
+            - float(away_profile["attack"])
         ),
         "defense_rating_difference": (
-            home_profile["defense"] - away_profile["defense"]
+            float(home_profile["defense"])
+            - float(away_profile["defense"])
         ),
     }
 
-    X_live = pd.DataFrame([row])[features]
+    unsupported_features = [
+        feature for feature in features if feature not in row
+    ]
+    if unsupported_features:
+        raise ValueError(
+            "The saved model expects unsupported features: "
+            f"{unsupported_features}"
+        )
 
-    X_live = X_live.fillna(
-        {
-            "elo_difference": 0,
-            "home_advantage": 0,
-            "recent_win_rate_difference": 0,
-            "recent_goals_for_difference": 0,
-            "recent_goals_against_difference": 0,
-            "recent_goal_difference_difference": 0,
-            "rest_days_difference": 0,
-            "streak_difference": 0,
-            "is_world_cup": 1,
-            "is_qualification": 0,
-            "is_friendly": 0,
-            "tournament_importance": 4,
-            "head_to_head_difference": 0,
-            "attack_rating_difference": 0,
-            "defense_rating_difference": 0,
-        }
-    )
-
-    return X_live
+    return pd.DataFrame([row], columns=features).fillna(0)
 
 
 # ============================================================
-# Prediction and Simulation
+# Prediction and Monte Carlo Simulation
 # ============================================================
+
 
 def predict_live_match(
     home_team: str,
@@ -956,14 +1057,15 @@ def predict_live_match(
     )
 
     probabilities = model.predict_proba(X_match)[0]
-
     prediction = {
         str(class_name): float(probability)
-        for class_name, probability in zip(model.classes_, probabilities)
+        for class_name, probability in zip(
+            model.classes_,
+            probabilities,
+        )
     }
 
     prediction_cache[cache_key] = prediction
-
     return prediction
 
 
@@ -994,20 +1096,22 @@ def simulate_live_knockout_match(
         neutral=True,
     )
 
-    home_prob = probabilities.get("home_win", 0.0)
-    away_prob = probabilities.get("away_win", 0.0)
+    home_probability = probabilities.get("home_win", 0.0)
+    away_probability = probabilities.get("away_win", 0.0)
+    knockout_total = home_probability + away_probability
 
-    total = home_prob + away_prob
-
-    if total <= 0:
-        return str(rng.choice([home_team, away_team]))
-
-    home_advances_prob = home_prob / total
+    if knockout_total <= 0:
+        home_advances_probability = 0.5
+    else:
+        home_advances_probability = home_probability / knockout_total
 
     return str(
         rng.choice(
             [home_team, away_team],
-            p=[home_advances_prob, 1 - home_advances_prob],
+            p=[
+                home_advances_probability,
+                1 - home_advances_probability,
+            ],
         )
     )
 
@@ -1024,16 +1128,15 @@ def simulate_live_world_cup_once(
     rng: np.random.Generator,
 ) -> dict[str, Any]:
     completed = completed_matches_by_id(state)
-    simulated_winners = {}
+    simulated_winners: dict[str, str] = {}
 
-    quarterfinalists = set()
-    semifinalists = set()
-    finalists = set()
-    champion = None
+    quarterfinalists: set[str] = set()
+    semifinalists: set[str] = set()
+    finalists: set[str] = set()
+    champion: str | None = None
 
     for match in BRACKET_MATCHES:
         match_id = match["id"]
-
         home_team, away_team = resolve_match_teams(
             match,
             state,
@@ -1043,19 +1146,16 @@ def simulate_live_world_cup_once(
         if home_team is None or away_team is None:
             continue
 
-        match_date = pd.Timestamp(match["date"])
-
         if match["round"] == "quarterfinal":
-            quarterfinalists.add(home_team)
-            quarterfinalists.add(away_team)
+            quarterfinalists.update({home_team, away_team})
 
         if match_id in completed:
-            winner = completed[match_id]["winner"]
+            winner = str(completed[match_id]["winner"])
         else:
             winner = simulate_live_knockout_match(
                 home_team=home_team,
                 away_team=away_team,
-                match_date=match_date,
+                match_date=pd.Timestamp(match["date"]),
                 model=model,
                 features=features,
                 matches=matches,
@@ -1070,10 +1170,8 @@ def simulate_live_world_cup_once(
 
         if match["round"] == "quarterfinal":
             semifinalists.add(winner)
-
         elif match["round"] == "semifinal":
             finalists.add(winner)
-
         elif match["round"] == "final":
             champion = winner
 
@@ -1090,32 +1188,29 @@ def run_live_simulations(
     model: Any,
     features: list[str],
     matches: pd.DataFrame,
-    num_simulations: int,
-    seed: int,
+    num_simulations: int = 10_000,
+    seed: int = 42,
 ) -> pd.DataFrame:
-    rng = np.random.default_rng(seed)
+    validate_state(state)
 
+    if num_simulations <= 0:
+        raise ValueError("num_simulations must be positive.")
+
+    rng = np.random.default_rng(seed)
     profiles = build_live_profiles(matches, state)
     recent_forms = build_recent_forms(matches, state)
-    prediction_cache = {}
+    prediction_cache: dict[tuple[Any, ...], dict[str, float]] = {}
     state_key = state_signature(state)
 
-    teams = set(INITIAL_TEAMS)
-
-    for completed_match in state.get("completed_matches", []):
-        teams.add(completed_match["home_team"])
-        teams.add(completed_match["away_team"])
-        teams.add(completed_match["winner"])
-
-    live_results = {}
-
-    for team in sorted(teams):
-        live_results[team] = {
+    results = {
+        team: {
             "quarterfinal": 0,
             "semifinal": 0,
             "final": 0,
             "champion": 0,
         }
+        for team in INITIAL_TEAMS
+    }
 
     for _ in range(num_simulations):
         simulation = simulate_live_world_cup_once(
@@ -1131,50 +1226,482 @@ def run_live_simulations(
         )
 
         for team in simulation["quarterfinalists"]:
-            live_results[team]["quarterfinal"] += 1
+            results[team]["quarterfinal"] += 1
 
         for team in simulation["semifinalists"]:
-            live_results[team]["semifinal"] += 1
+            results[team]["semifinal"] += 1
 
         for team in simulation["finalists"]:
-            live_results[team]["final"] += 1
+            results[team]["final"] += 1
 
         champion = simulation["champion"]
-
         if champion is not None:
-            live_results[champion]["champion"] += 1
+            results[champion]["champion"] += 1
 
-    results = pd.DataFrame.from_dict(live_results, orient="index")
-    results.index.name = "team"
+    result_frame = pd.DataFrame.from_dict(results, orient="index")
+    result_frame.index.name = "team"
 
-    results = results / num_simulations
-    results = results.sort_values("champion", ascending=False)
+    return (result_frame / num_simulations).sort_values(
+        "champion",
+        ascending=False,
+    )
 
-    return results
+
+# ============================================================
+# Permanent Prediction History Builder
+# ============================================================
+
+
+def format_result_summary(record: dict[str, Any]) -> str:
+    home_team = str(record["home_team"])
+    away_team = str(record["away_team"])
+    home_score = int(record["home_score"])
+    away_score = int(record["away_score"])
+    winner = str(record["winner"])
+
+    if home_score == away_score:
+        return (
+            f"{winner} advanced after {home_team} "
+            f"{home_score}-{away_score} {away_team}"
+        )
+
+    return f"{home_team} {home_score}-{away_score} {away_team}"
+
+
+def checkpoint_label(
+    checkpoint_index: int,
+    records: list[dict[str, Any]],
+) -> str:
+    if checkpoint_index == 0:
+        return "Initial projection before the July 5 updates"
+
+    record = records[checkpoint_index - 1]
+    return f"After {format_result_summary(record)}"
+
+
+def checkpoint_short_label(
+    checkpoint_index: int,
+    records: list[dict[str, Any]],
+) -> str:
+    if checkpoint_index == 0:
+        return "Start"
+
+    record = records[checkpoint_index - 1]
+    timestamp = pd.Timestamp(record["date"])
+    date_text = f"{timestamp.strftime('%b')} {timestamp.day}"
+    winner = str(record["winner"])
+    return f"{date_text}: {winner}"
+
+
+def teams_remaining_count(state: dict[str, Any]) -> int:
+    eliminated: set[str] = set()
+
+    for match in state.get("completed_matches", []):
+        loser = (
+            match["away_team"]
+            if match["winner"] == match["home_team"]
+            else match["home_team"]
+        )
+        eliminated.add(str(loser))
+
+    return len(set(INITIAL_TEAMS) - eliminated)
+
+
+def build_prediction_history(
+    official_state: dict[str, Any],
+    model: Any,
+    features: list[str],
+    matches: pd.DataFrame,
+    num_simulations: int = 10_000,
+    seed: int = 42,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
+    validate_state(official_state)
+    records = official_state["completed_matches"]
+
+    history_rows: list[dict[str, Any]] = []
+    summary_rows: list[dict[str, Any]] = []
+
+    for checkpoint_index in range(len(records) + 1):
+        checkpoint_state = get_state_at_checkpoint(
+            official_state,
+            checkpoint_index,
+        )
+        label = checkpoint_label(checkpoint_index, records)
+        short_label = checkpoint_short_label(checkpoint_index, records)
+        trigger = records[checkpoint_index - 1] if checkpoint_index else None
+
+        checkpoint_results = run_live_simulations(
+            state=checkpoint_state,
+            model=model,
+            features=features,
+            matches=matches,
+            num_simulations=num_simulations,
+            seed=seed,
+        )
+
+        ranked = checkpoint_results.reset_index().copy()
+        ranked["champion_rank"] = (
+            ranked["champion"]
+            .rank(method="min", ascending=False)
+            .astype(int)
+        )
+
+        top_row = ranked.iloc[0]
+        champion_row = ranked[
+            ranked["team"] == ACTUAL_CHAMPION
+        ].iloc[0]
+
+        snapshot_id = (
+            "initial"
+            if trigger is None
+            else f"after_{trigger['match_id']}"
+        )
+        snapshot_date = (
+            str(TRACKING_START_DATE.date())
+            if trigger is None
+            else str(trigger["date"])
+        )
+        trigger_match_id = "" if trigger is None else str(trigger["match_id"])
+        trigger_result = "" if trigger is None else format_result_summary(trigger)
+
+        summary_row = {
+            "checkpoint_index": checkpoint_index,
+            "snapshot_id": snapshot_id,
+            "snapshot_date": snapshot_date,
+            "snapshot_label": label,
+            "snapshot_short_label": short_label,
+            "trigger_match_id": trigger_match_id,
+            "trigger_result": trigger_result,
+            "teams_remaining": teams_remaining_count(checkpoint_state),
+            "top_projected_champion": str(top_row["team"]),
+            "top_champion_probability": float(top_row["champion"]),
+            "actual_champion": ACTUAL_CHAMPION,
+            "actual_champion_probability": float(
+                champion_row["champion"]
+            ),
+            "actual_champion_rank": int(
+                champion_row["champion_rank"]
+            ),
+        }
+        summary_rows.append(summary_row)
+
+        for _, row in ranked.iterrows():
+            history_rows.append(
+                {
+                    "checkpoint_index": checkpoint_index,
+                    "snapshot_id": snapshot_id,
+                    "snapshot_date": snapshot_date,
+                    "snapshot_label": label,
+                    "snapshot_short_label": short_label,
+                    "trigger_match_id": trigger_match_id,
+                    "trigger_result": trigger_result,
+                    "team": str(row["team"]),
+                    "quarterfinal": float(row["quarterfinal"]),
+                    "semifinal": float(row["semifinal"]),
+                    "final": float(row["final"]),
+                    "champion": float(row["champion"]),
+                    "champion_rank": int(row["champion_rank"]),
+                }
+            )
+
+    history = pd.DataFrame(history_rows)
+    snapshot_summary = pd.DataFrame(summary_rows)
+
+    pre_final_checkpoint = max(len(records) - 1, 0)
+    pre_final = history[
+        history["checkpoint_index"] == pre_final_checkpoint
+    ].sort_values("champion", ascending=False)
+
+    initial_summary = snapshot_summary.iloc[0]
+    before_final_summary = snapshot_summary.iloc[pre_final_checkpoint]
+    champion_before_final = pre_final[
+        pre_final["team"] == ACTUAL_CHAMPION
+    ].iloc[0]
+
+    final_report = {
+        "actual_champion": ACTUAL_CHAMPION,
+        "history_method": (
+            "Replayed every chronological prefix of official_results.json "
+            "using only processed match rows dated before 2026-07-05, then "
+            "applied completed tournament matches one at a time."
+        ),
+        "base_data_cutoff_exclusive": str(TRACKING_START_DATE.date()),
+        "total_checkpoints": int(len(snapshot_summary)),
+        "simulation_count_per_checkpoint": int(num_simulations),
+        "random_seed": int(seed),
+        "initial_projected_champion": str(
+            initial_summary["top_projected_champion"]
+        ),
+        "initial_projected_champion_probability": float(
+            initial_summary["top_champion_probability"]
+        ),
+        "initial_actual_champion_probability": float(
+            initial_summary["actual_champion_probability"]
+        ),
+        "initial_actual_champion_rank": int(
+            initial_summary["actual_champion_rank"]
+        ),
+        "pre_final_projected_champion": str(
+            before_final_summary["top_projected_champion"]
+        ),
+        "pre_final_actual_champion_probability": float(
+            champion_before_final["champion"]
+        ),
+        "highest_actual_champion_probability_before_final": float(
+            snapshot_summary.iloc[:-1][
+                "actual_champion_probability"
+            ].max()
+        )
+        if len(snapshot_summary) > 1
+        else float(initial_summary["actual_champion_probability"]),
+        "final_pre_match_odds": [
+            {
+                "team": str(row["team"]),
+                "champion_probability": float(row["champion"]),
+            }
+            for _, row in pre_final.head(2).iterrows()
+        ],
+    }
+
+    return history, snapshot_summary, final_report
+
+
+# ============================================================
+# Prediction Archive Loading and Legacy Migration
+# ============================================================
+
+
+def normalize_history_dataframe(history: pd.DataFrame) -> pd.DataFrame:
+    required_columns = {
+        "snapshot_label",
+        "team",
+        "quarterfinal",
+        "semifinal",
+        "final",
+        "champion",
+    }
+
+    missing_columns = required_columns - set(history.columns)
+    if missing_columns:
+        raise ValueError(
+            "prediction_history.csv is missing columns: "
+            f"{sorted(missing_columns)}"
+        )
+
+    normalized = history.copy()
+
+    if "checkpoint_index" not in normalized.columns:
+        labels = normalized["snapshot_label"].astype(str).drop_duplicates()
+        label_to_index = {
+            label: index for index, label in enumerate(labels.tolist())
+        }
+        normalized["checkpoint_index"] = normalized[
+            "snapshot_label"
+        ].map(label_to_index)
+
+    normalized["checkpoint_index"] = pd.to_numeric(
+        normalized["checkpoint_index"],
+        errors="raise",
+    ).astype(int)
+
+    defaults: dict[str, Any] = {
+        "snapshot_id": "",
+        "snapshot_date": "",
+        "snapshot_short_label": "",
+        "trigger_match_id": "",
+        "trigger_result": "",
+    }
+
+    for column, default in defaults.items():
+        if column not in normalized.columns:
+            normalized[column] = default
+
+    if "champion_rank" not in normalized.columns:
+        normalized["champion_rank"] = normalized.groupby(
+            "checkpoint_index"
+        )["champion"].rank(method="min", ascending=False)
+
+    normalized["champion_rank"] = pd.to_numeric(
+        normalized["champion_rank"],
+        errors="coerce",
+    ).fillna(len(INITIAL_TEAMS)).astype(int)
+
+    for probability_column in [
+        "quarterfinal",
+        "semifinal",
+        "final",
+        "champion",
+    ]:
+        normalized[probability_column] = pd.to_numeric(
+            normalized[probability_column],
+            errors="raise",
+        )
+
+    return normalized.sort_values(
+        ["checkpoint_index", "champion", "team"],
+        ascending=[True, False, True],
+    ).reset_index(drop=True)
+
+
+def derive_snapshot_summary(history: pd.DataFrame) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+
+    for checkpoint_index, group in history.groupby(
+        "checkpoint_index",
+        sort=True,
+    ):
+        ranked = group.sort_values("champion", ascending=False)
+        top_row = ranked.iloc[0]
+        champion_matches = ranked[ranked["team"] == ACTUAL_CHAMPION]
+
+        if champion_matches.empty:
+            champion_probability = 0.0
+            champion_rank = len(INITIAL_TEAMS)
+        else:
+            champion_row = champion_matches.iloc[0]
+            champion_probability = float(champion_row["champion"])
+            champion_rank = int(champion_row["champion_rank"])
+
+        label = str(top_row.get("snapshot_label", f"Checkpoint {checkpoint_index}"))
+        short_label = str(top_row.get("snapshot_short_label", ""))
+        if not short_label:
+            short_label = (
+                "Start"
+                if int(checkpoint_index) == 0
+                else f"Checkpoint {int(checkpoint_index)}"
+            )
+
+        rows.append(
+            {
+                "checkpoint_index": int(checkpoint_index),
+                "snapshot_id": str(top_row.get("snapshot_id", "")),
+                "snapshot_date": str(top_row.get("snapshot_date", "")),
+                "snapshot_label": label,
+                "snapshot_short_label": short_label,
+                "trigger_match_id": str(top_row.get("trigger_match_id", "")),
+                "trigger_result": str(top_row.get("trigger_result", "")),
+                "teams_remaining": int((ranked["champion"] > 0).sum()),
+                "top_projected_champion": str(top_row["team"]),
+                "top_champion_probability": float(top_row["champion"]),
+                "actual_champion": ACTUAL_CHAMPION,
+                "actual_champion_probability": champion_probability,
+                "actual_champion_rank": champion_rank,
+            }
+        )
+
+    return pd.DataFrame(rows).sort_values("checkpoint_index")
+
+
+def load_prediction_archive(
+    history_path: Path = PREDICTION_HISTORY_PATH,
+    summary_path: Path = SNAPSHOT_SUMMARY_PATH,
+    report_path: Path = FINAL_MODEL_REPORT_PATH,
+) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
+    if not history_path.exists():
+        return pd.DataFrame(), pd.DataFrame(), {}
+
+    history = normalize_history_dataframe(pd.read_csv(history_path))
+
+    if summary_path.exists():
+        snapshot_summary = pd.read_csv(summary_path)
+        if "checkpoint_index" not in snapshot_summary.columns:
+            snapshot_summary = derive_snapshot_summary(history)
+        else:
+            snapshot_summary["checkpoint_index"] = pd.to_numeric(
+                snapshot_summary["checkpoint_index"],
+                errors="raise",
+            ).astype(int)
+            snapshot_summary = snapshot_summary.sort_values(
+                "checkpoint_index"
+            ).reset_index(drop=True)
+    else:
+        snapshot_summary = derive_snapshot_summary(history)
+
+    final_report = load_json(report_path) if report_path.exists() else {}
+    return history, snapshot_summary, final_report
+
+
+# ============================================================
+# Streamlit Cache Wrappers
+# ============================================================
+
+
+@st.cache_resource
+def load_interactive_resources() -> tuple[Any, list[str], pd.DataFrame]:
+    model, features = load_model_and_features()
+    matches = load_matches()
+    return model, features, matches
+
+
+@st.cache_data(show_spinner=False)
+def run_cached_scenario(
+    state_json: str,
+    num_simulations: int,
+    seed: int,
+) -> pd.DataFrame:
+    model, features, matches = load_interactive_resources()
+    state = json.loads(state_json)
+
+    return run_live_simulations(
+        state=state,
+        model=model,
+        features=features,
+        matches=matches,
+        num_simulations=num_simulations,
+        seed=seed,
+    )
 
 
 # ============================================================
 # UI Helpers
 # ============================================================
 
+
 def probability_to_percent(value: float) -> str:
     return f"{value * 100:.2f}%"
 
 
 def display_top_three(results: pd.DataFrame) -> None:
-    top_three = results.head(3)
-
     columns = st.columns(3)
 
-    for column, (team, row) in zip(columns, top_three.iterrows()):
+    for column, (team, row) in zip(columns, results.head(3).iterrows()):
         column.metric(
-            label=team,
-            value=probability_to_percent(row["champion"]),
+            label=str(team),
+            value=probability_to_percent(float(row["champion"])),
             delta="Champion odds",
         )
 
 
-def make_bar_chart(
+def display_completed_matches(state: dict[str, Any]) -> None:
+    completed = state.get("completed_matches", [])
+
+    if not completed:
+        st.info("No official results were locked at this checkpoint.")
+        return
+
+    completed_frame = pd.DataFrame(completed)
+    completed_frame["round"] = completed_frame["round"].map(
+        format_round_name
+    )
+
+    st.dataframe(
+        completed_frame[
+            [
+                "date",
+                "round",
+                "home_team",
+                "home_score",
+                "away_score",
+                "away_team",
+                "winner",
+            ]
+        ],
+        width="stretch",
+        hide_index=True,
+    )
+
+
+def make_probability_bar_chart(
     results: pd.DataFrame,
     column_name: str,
     title: str,
@@ -1186,10 +1713,9 @@ def make_bar_chart(
         .head(top_n)
         .reset_index()
     )
-
     chart_data[column_name] = chart_data[column_name] * 100
 
-    fig = px.bar(
+    figure = px.bar(
         chart_data,
         x="team",
         y=column_name,
@@ -1199,670 +1725,885 @@ def make_bar_chart(
             column_name: "Probability (%)",
         },
     )
-
-    fig.update_layout(
-        xaxis_tickangle=-35,
+    figure.update_layout(
+        xaxis_tickangle=-30,
         height=450,
     )
+    return figure
 
-    return fig
 
+def make_timeline_chart(
+    history: pd.DataFrame,
+    snapshot_summary: pd.DataFrame,
+    teams: list[str],
+):
+    chart_data = history[history["team"].isin(teams)].copy()
+    chart_data["champion_percent"] = chart_data["champion"] * 100
 
-def make_history_chart(history: pd.DataFrame):
-    if history.empty:
-        return None
-
-    required_columns = {
-        "snapshot_label",
-        "team",
-        "champion",
-    }
-
-    if not required_columns.issubset(set(history.columns)):
-        return None
-
-    chart_data = history.copy()
-    chart_data["champion_pct"] = chart_data["champion"] * 100
-
-    top_teams = (
-        chart_data.sort_values("champion", ascending=False)
-        .groupby("snapshot_label")
-        .head(3)["team"]
-        .unique()
-        .tolist()
-    )
-
-    chart_data = chart_data[chart_data["team"].isin(top_teams)]
-
-    fig = px.line(
+    figure = px.line(
         chart_data,
-        x="snapshot_label",
-        y="champion_pct",
+        x="checkpoint_index",
+        y="champion_percent",
         color="team",
         markers=True,
-        title="Champion Probability Over Time",
+        custom_data=["snapshot_label", "trigger_result"],
         labels={
-            "snapshot_label": "Prediction Snapshot",
-            "champion_pct": "Champion Probability (%)",
+            "checkpoint_index": "Prediction checkpoint",
+            "champion_percent": "Champion probability (%)",
             "team": "Team",
         },
+        title="Champion Probability Through the Knockout Stage",
     )
-
-    fig.update_layout(
-        xaxis_tickangle=-35,
-        height=450,
-    )
-
-    return fig
-
-
-def display_completed_matches(state: dict[str, Any]) -> None:
-    completed = state.get("completed_matches", [])
-
-    if len(completed) == 0:
-        st.info("No completed match results are locked in yet.")
-        return
-
-    completed_df = pd.DataFrame(completed)
-
-    display_columns = [
-        "date",
-        "round",
-        "home_team",
-        "home_score",
-        "away_score",
-        "away_team",
-        "winner",
-    ]
-
-    st.dataframe(
-        completed_df[display_columns],
-        width="stretch",
-        hide_index=True,
-    )
-
-
-def make_current_snapshot(
-    results: pd.DataFrame,
-    snapshot_label: str,
-) -> pd.DataFrame:
-    snapshot = results.reset_index().rename(columns={"index": "team"})
-
-    if "team" not in snapshot.columns:
-        snapshot = snapshot.rename(columns={snapshot.columns[0]: "team"})
-
-    snapshot.insert(0, "snapshot_label", snapshot_label)
-
-    return snapshot
-
-
-def initialize_scenario_state(official_state: dict[str, Any]) -> None:
-    official_key = state_signature(official_state)
-
-    if "official_state_key" not in st.session_state:
-        st.session_state["official_state_key"] = official_key
-
-    if "scenario_state" not in st.session_state:
-        st.session_state["scenario_state"] = copy.deepcopy(official_state)
-
-    if "scenario_history" not in st.session_state:
-        st.session_state["scenario_history"] = []
-
-    if st.session_state["official_state_key"] != official_key:
-        st.session_state["official_state_key"] = official_key
-        st.session_state["scenario_state"] = copy.deepcopy(official_state)
-        st.session_state["scenario_history"] = []
-
-
-def reset_scenario_state(official_state: dict[str, Any]) -> None:
-    st.session_state["scenario_state"] = copy.deepcopy(official_state)
-    st.session_state["scenario_history"] = []
-
-
-# ============================================================
-# Main App
-# ============================================================
-
-st.title("⚽ FIFA World Cup ML Predictor")
-st.caption(
-    "A live tournament dashboard powered by a trained match prediction model, "
-    "live feature updates, and Monte Carlo simulation."
-)
-
-try:
-    model, features = load_model_and_features()
-    matches = load_matches()
-    official_state = load_official_state()
-
-except FileNotFoundError as error:
-    st.error(str(error))
-    st.stop()
-
-except ValueError as error:
-    st.error(f"Official results file has an error: {error}")
-    st.stop()
-
-
-initialize_scenario_state(official_state)
-
-with st.sidebar:
-    st.header("Simulation Settings")
-
-    num_simulations = st.slider(
-        "Number of simulations",
-        min_value=500,
-        max_value=20000,
-        value=5000,
-        step=500,
-    )
-
-    seed = st.number_input(
-        "Random seed",
-        min_value=1,
-        max_value=999999,
-        value=42,
-        step=1,
-    )
-
-    st.divider()
-
-    st.write("Official results are read-only on the public app.")
-
-    if st.button("Reset My Scenario"):
-        reset_scenario_state(official_state)
-        st.success("Your temporary scenario was reset.")
-        st.rerun()
-
-
-with st.spinner("Running official tournament simulations..."):
-    official_results = run_live_simulations(
-        state=official_state,
-        model=model,
-        features=features,
-        matches=matches,
-        num_simulations=num_simulations,
-        seed=int(seed),
-    )
-
-
-dashboard_tab, scenario_tab, history_tab, match_tab, about_tab = st.tabs(
-    [
-        "Dashboard",
-        "Scenario Lab",
-        "Past Predictions",
-        "Match Probabilities",
-        "About the Model",
-    ]
-)
-
-
-# ============================================================
-# Dashboard Tab
-# ============================================================
-
-with dashboard_tab:
-    st.subheader("Official Current Projection")
-
-    projected_champion = official_results.index[0]
-    projected_champion_probability = official_results.iloc[0]["champion"]
-
-    st.metric(
-        label="Projected Champion",
-        value=projected_champion,
-        delta=probability_to_percent(projected_champion_probability),
-    )
-
-    st.markdown("### Top 3 Champion Odds")
-    display_top_three(official_results)
-
-    st.markdown("### Locked Official Results")
-    display_completed_matches(official_state)
-
-    st.markdown("### Champion Probabilities")
-    champion_fig = make_bar_chart(
-        official_results,
-        "champion",
-        "Official Champion Probabilities",
-    )
-    st.plotly_chart(champion_fig, width="stretch")
-
-    st.markdown("### Final Appearance Probabilities")
-    final_fig = make_bar_chart(
-        official_results,
-        "final",
-        "Official Final Appearance Probabilities",
-    )
-    st.plotly_chart(final_fig, width="stretch")
-
-    st.markdown("### Full Official Probability Table")
-    st.dataframe(
-        (official_results * 100).round(2),
-        width="stretch",
-    )
-
-
-# ============================================================
-# Scenario Lab Tab
-# ============================================================
-
-with scenario_tab:
-    st.subheader("Scenario Lab")
-
-    st.write(
-        "Try hypothetical match results and see how the model changes. "
-        "These updates are temporary and only affect your browser session. "
-        "Refreshing the page resets back to the official dashboard state."
-    )
-
-    scenario_state = st.session_state["scenario_state"]
-
-    with st.spinner("Running scenario simulations..."):
-        scenario_results = run_live_simulations(
-            state=scenario_state,
-            model=model,
-            features=features,
-            matches=matches,
-            num_simulations=num_simulations,
-            seed=int(seed),
+    figure.update_traces(
+        hovertemplate=(
+            "<b>%{fullData.name}</b><br>"
+            "%{customdata[0]}<br>"
+            "Champion probability: %{y:.2f}%<extra></extra>"
         )
-
-    st.markdown("### Scenario Projection")
-
-    scenario_projected_champion = scenario_results.index[0]
-    scenario_projected_champion_probability = scenario_results.iloc[0][
-        "champion"
-    ]
-
-    st.metric(
-        label="Scenario Projected Champion",
-        value=scenario_projected_champion,
-        delta=probability_to_percent(scenario_projected_champion_probability),
     )
 
-    display_top_three(scenario_results)
-
-    st.markdown("### Scenario Results Entered")
-    display_completed_matches(scenario_state)
-
-    st.divider()
-
-    available_matches = get_available_matches(scenario_state)
-
-    if len(available_matches) == 0:
-        st.success("All matches have been completed in this scenario.")
-
+    tick_values = snapshot_summary["checkpoint_index"].tolist()
+    if "snapshot_short_label" in snapshot_summary.columns:
+        tick_text = snapshot_summary["snapshot_short_label"].astype(str).tolist()
     else:
-        option_labels = [
-            format_match_label(match, home_team, away_team)
-            for match, home_team, away_team in available_matches
-        ]
+        tick_text = [f"#{value}" for value in tick_values]
 
-        selected_label = st.selectbox(
-            "Select a match to update temporarily",
-            option_labels,
+    figure.update_xaxes(
+        tickmode="array",
+        tickvals=tick_values,
+        ticktext=tick_text,
+        tickangle=-35,
+    )
+    figure.update_layout(height=540)
+    return figure
+
+
+def initialize_scenario_state(
+    official_state: dict[str, Any],
+    checkpoint_index: int,
+) -> None:
+    scenario_key = f"checkpoint_{checkpoint_index}"
+
+    if st.session_state.get("scenario_start_key") != scenario_key:
+        st.session_state["scenario_start_key"] = scenario_key
+        st.session_state["scenario_state"] = get_state_at_checkpoint(
+            official_state,
+            checkpoint_index,
         )
+        st.session_state["scenario_path"] = []
 
-        selected_index = option_labels.index(selected_label)
-        selected_match, home_team, away_team = available_matches[
-            selected_index
-        ]
 
-        with st.form("scenario_result_form"):
-            match_date = st.date_input(
-                "Match date",
-                value=pd.Timestamp(selected_match["date"]).date(),
-            )
-
-            left_column, right_column = st.columns(2)
-
-            with left_column:
-                home_score = st.number_input(
-                    f"{home_team} score",
-                    min_value=0,
-                    max_value=20,
-                    value=0,
-                    step=1,
-                )
-
-            with right_column:
-                away_score = st.number_input(
-                    f"{away_team} score",
-                    min_value=0,
-                    max_value=20,
-                    value=0,
-                    step=1,
-                )
-
-            if home_score > away_score:
-                winner = home_team
-                st.info(f"Winner: {winner}")
-
-            elif away_score > home_score:
-                winner = away_team
-                st.info(f"Winner: {winner}")
-
-            else:
-                winner = st.selectbox(
-                    "Scores are tied. Who advances?",
-                    [home_team, away_team],
-                )
-
-            submitted = st.form_submit_button("Apply Temporary Scenario Result")
-
-        if submitted:
-            try:
-                updated_scenario_state = add_completed_match_to_state(
-                    state=scenario_state,
-                    match=selected_match,
-                    home_team=home_team,
-                    away_team=away_team,
-                    match_date=str(match_date),
-                    home_score=int(home_score),
-                    away_score=int(away_score),
-                    winner=winner,
-                )
-
-                st.session_state["scenario_state"] = updated_scenario_state
-
-                label = (
-                    f"After {home_team} "
-                    f"{int(home_score)}-{int(away_score)} {away_team}"
-                )
-
-                st.session_state["scenario_history"].append(label)
-
-                st.success(
-                    "Temporary scenario applied. "
-                    "This did not save to the official dashboard."
-                )
-
-                st.rerun()
-
-            except ValueError as error:
-                st.error(str(error))
-
-    st.markdown("### Scenario Champion Probabilities")
-    scenario_champion_fig = make_bar_chart(
-        scenario_results,
-        "champion",
-        "Scenario Champion Probabilities",
+def reset_scenario_state(
+    official_state: dict[str, Any],
+    checkpoint_index: int,
+) -> None:
+    st.session_state["scenario_state"] = get_state_at_checkpoint(
+        official_state,
+        checkpoint_index,
     )
-    st.plotly_chart(scenario_champion_fig, width="stretch")
+    st.session_state["scenario_path"] = []
 
-    st.markdown("### Scenario Full Probability Table")
-    st.dataframe(
-        (scenario_results * 100).round(2),
-        width="stretch",
+
+def render_model_load_error(error: Exception) -> None:
+    st.error("The interactive model could not be loaded.")
+    st.code(str(error))
+    st.info(
+        "The permanent archive still works. The What-If Lab requires the "
+        "package versions in requirements.txt, especially scikit-learn 1.9.0."
     )
 
 
 # ============================================================
-# Past Predictions Tab
+# Main Streamlit App
 # ============================================================
 
-with history_tab:
-    st.subheader("Past Official Prediction Snapshots")
 
-    history = load_prediction_history()
+def main() -> None:
+    st.set_page_config(
+        page_title="FIFA World Cup 2026 Prediction Archive",
+        page_icon="⚽",
+        layout="wide",
+    )
 
-    if history.empty:
+    st.markdown(
+        """
+        <style>
+        .champion-card {
+            border: 2px solid currentColor;
+            border-radius: 16px;
+            padding: 1.5rem 1.75rem;
+            margin: 0.8rem 0 1.25rem 0;
+            text-align: center;
+        }
+        .champion-title {
+            font-size: 2.15rem;
+            font-weight: 800;
+            margin-bottom: 0.25rem;
+        }
+        .champion-subtitle {
+            font-size: 1.05rem;
+            opacity: 0.82;
+        }
+        .archive-note {
+            border-left: 4px solid currentColor;
+            padding: 0.15rem 0 0.15rem 1rem;
+            margin: 0.75rem 0 1rem 0;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    try:
+        official_state = load_official_state()
+    except Exception as error:
+        st.error("The official results file contains an error.")
+        st.code(str(error))
+        st.stop()
+
+    try:
+        tournament_summary = load_json(TOURNAMENT_SUMMARY_PATH)
+    except Exception as error:
+        st.error("The tournament summary file could not be loaded.")
+        st.code(str(error))
+        st.stop()
+
+    try:
+        history, snapshot_summary, final_report = load_prediction_archive()
+    except Exception as error:
+        st.error("The saved prediction history contains an error.")
+        st.code(str(error))
         st.info(
-            "No committed prediction history file found yet. "
-            "The current official snapshot is shown below."
+            "Run `python scripts/build_prediction_history.py --simulations 10000` "
+            "to rebuild the archive from the official result sequence."
+        )
+        history = pd.DataFrame()
+        snapshot_summary = pd.DataFrame()
+        final_report = {}
+
+    champion = str(tournament_summary["champion"])
+    runner_up = str(tournament_summary["runner_up"])
+    third_place = str(tournament_summary["third_place"])
+    fourth_place = str(tournament_summary["fourth_place"])
+    final_data = tournament_summary["final"]
+
+    st.title("⚽ FIFA World Cup 2026 Prediction Archive")
+    st.caption(
+        "The completed record of a live machine learning experiment: the "
+        "champion, official results, and every reconstructed prediction "
+        "checkpoint from the knockout stage."
+    )
+
+    st.markdown(
+        f"""
+        <div class="champion-card">
+            <div class="champion-title">🏆 {champion} — 2026 World Champions</div>
+            <div class="champion-subtitle">
+                {final_data['home_team']} {final_data['home_score']}-{final_data['away_score']} {final_data['away_team']} {final_data.get('decision', '')}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    hero_columns = st.columns(4)
+    hero_columns[0].metric("Champion", champion)
+    hero_columns[1].metric("Runner-up", runner_up)
+    hero_columns[2].metric("Third place", third_place)
+    hero_columns[3].metric(
+        "Saved checkpoints",
+        0 if snapshot_summary.empty else len(snapshot_summary),
+    )
+
+    if history.empty or snapshot_summary.empty:
+        st.warning(
+            "The final result is loaded, but the permanent probability history "
+            "has not been rebuilt in the new format yet."
+        )
+        st.code(
+            "source .venv/bin/activate\n"
+            "python scripts/build_prediction_history.py --simulations 10000"
         )
 
-        current_snapshot = make_current_snapshot(
-            official_results,
-            "Current official projection",
-        )
-
-        display_snapshot = current_snapshot.copy()
-
-        for column in ["quarterfinal", "semifinal", "final", "champion"]:
-            display_snapshot[column] = (
-                display_snapshot[column] * 100
-            ).round(2)
-
-        st.dataframe(
-            display_snapshot,
-            width="stretch",
-            hide_index=True,
-        )
-
-    else:
-        history_chart = make_history_chart(history)
-
-        if history_chart is not None:
-            st.plotly_chart(history_chart, width="stretch")
-
-        display_history = history.copy()
-
-        for column in ["quarterfinal", "semifinal", "final", "champion"]:
-            if column in display_history.columns:
-                display_history[column] = (
-                    display_history[column] * 100
-                ).round(2)
-
-        st.dataframe(
-            display_history,
-            width="stretch",
-            hide_index=True,
-        )
-
-    st.markdown("### Your Temporary Scenario Path")
-
-    if len(st.session_state["scenario_history"]) == 0:
-        st.info("You have not applied any temporary scenario results yet.")
-    else:
-        for index, label in enumerate(st.session_state["scenario_history"], 1):
-            st.write(f"{index}. {label}")
-
-
-# ============================================================
-# Match Probabilities Tab
-# ============================================================
-
-with match_tab:
-    st.subheader("Current Official Match Probability Explorer")
-
-    available_matches = get_available_matches(official_state)
-
-    if len(available_matches) == 0:
-        st.info("No unresolved official matches are currently available.")
-
-    else:
-        option_labels = [
-            format_match_label(match, home_team, away_team)
-            for match, home_team, away_team in available_matches
+    overview_tab, timeline_tab, snapshot_tab, results_tab, scenario_tab, about_tab = st.tabs(
+        [
+            "Final Overview",
+            "Prediction Timeline",
+            "Snapshot Explorer",
+            "Official Results",
+            "What-If Lab",
+            "About the Model",
         ]
+    )
 
-        selected_label = st.selectbox(
-            "Select official unresolved match",
-            option_labels,
-            key="official_probability_selector",
+    # --------------------------------------------------------
+    # Final Overview
+    # --------------------------------------------------------
+
+    with overview_tab:
+        st.subheader("The final outcome and what the model said beforehand")
+
+        placement_columns = st.columns(4)
+        placement_columns[0].metric("1st", champion)
+        placement_columns[1].metric("2nd", runner_up)
+        placement_columns[2].metric("3rd", third_place)
+        placement_columns[3].metric("4th", fourth_place)
+
+        st.success(
+            f"{final_data['home_team']} {final_data['home_score']}-"
+            f"{final_data['away_score']} {final_data['away_team']} — "
+            f"{champion} won {final_data.get('decision', '').strip()}."
         )
 
-        selected_index = option_labels.index(selected_label)
-        selected_match, home_team, away_team = available_matches[
-            selected_index
-        ]
+        if not history.empty and not snapshot_summary.empty:
+            pre_final_index = int(snapshot_summary["checkpoint_index"].max()) - 1
+            pre_final = history[
+                history["checkpoint_index"] == pre_final_index
+            ].sort_values("champion", ascending=False)
 
-        profiles = build_live_profiles(matches, official_state)
-        recent_forms = build_recent_forms(matches, official_state)
-        prediction_cache = {}
+            st.markdown("### Model odds immediately before the final")
+            pre_final_columns = st.columns(2)
+            for column, (_, row) in zip(
+                pre_final_columns,
+                pre_final.head(2).iterrows(),
+            ):
+                column.metric(
+                    str(row["team"]),
+                    probability_to_percent(float(row["champion"])),
+                    "Chance to win the final",
+                )
 
-        probabilities = predict_live_match(
-            home_team=home_team,
-            away_team=away_team,
-            match_date=pd.Timestamp(selected_match["date"]),
-            model=model,
-            features=features,
-            matches=matches,
-            profiles=profiles,
-            recent_forms=recent_forms,
-            prediction_cache=prediction_cache,
-            state_key=state_signature(official_state),
-            neutral=True,
-        )
+            champion_history = history[
+                history["team"] == ACTUAL_CHAMPION
+            ].sort_values("checkpoint_index")
+            initial_champion = champion_history.iloc[0]
+            before_final_champion = champion_history[
+                champion_history["checkpoint_index"] == pre_final_index
+            ].iloc[0]
+            peak_before_final = champion_history[
+                champion_history["checkpoint_index"] < int(
+                    snapshot_summary["checkpoint_index"].max()
+                )
+            ]["champion"].max()
 
-        home_win_probability = probabilities.get("home_win", 0.0)
-        draw_probability = probabilities.get("draw", 0.0)
-        away_win_probability = probabilities.get("away_win", 0.0)
-
-        knockout_total = home_win_probability + away_win_probability
-
-        if knockout_total > 0:
-            home_advances_probability = (
-                home_win_probability / knockout_total
+            st.markdown("### Spain's prediction journey at a glance")
+            journey_columns = st.columns(3)
+            journey_columns[0].metric(
+                "Initial Spain odds",
+                probability_to_percent(float(initial_champion["champion"])),
+                f"Rank #{int(initial_champion['champion_rank'])}",
             )
-            away_advances_probability = (
-                away_win_probability / knockout_total
+            journey_columns[1].metric(
+                "Peak before the final",
+                probability_to_percent(float(peak_before_final)),
+            )
+            journey_columns[2].metric(
+                "Spain odds before final",
+                probability_to_percent(
+                    float(before_final_champion["champion"])
+                ),
+            )
+
+            default_overview_teams = [
+                team
+                for team in [
+                    "Spain",
+                    "Argentina",
+                    "France",
+                    "England",
+                    "Brazil",
+                ]
+                if team in history["team"].unique()
+            ]
+            overview_figure = make_timeline_chart(
+                history,
+                snapshot_summary,
+                default_overview_teams,
+            )
+            st.plotly_chart(overview_figure, width="stretch")
+
+            initial_summary = snapshot_summary.iloc[0]
+            st.markdown("### Forecast accountability")
+            st.markdown(
+                f"""
+                <div class="archive-note">
+                At the first saved checkpoint, the model's top projected champion was
+                <strong>{initial_summary['top_projected_champion']}</strong> at
+                <strong>{probability_to_percent(float(initial_summary['top_champion_probability']))}</strong>.
+                The eventual champion, <strong>{champion}</strong>, started at
+                <strong>{probability_to_percent(float(initial_summary['actual_champion_probability']))}</strong>
+                and rank <strong>#{int(initial_summary['actual_champion_rank'])}</strong>.
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    # --------------------------------------------------------
+    # Prediction Timeline
+    # --------------------------------------------------------
+
+    with timeline_tab:
+        st.subheader("Champion probability at every saved checkpoint")
+        st.write(
+            "The graph no longer depends on Streamlit session state. It reads "
+            "a committed CSV generated by replaying each official result one "
+            "match at a time. That is why the historical line now survives "
+            "restarts and deployments."
+        )
+
+        if history.empty or snapshot_summary.empty:
+            st.info(
+                "Build the archive first with `python scripts/build_prediction_history.py --simulations 10000`."
             )
         else:
-            home_advances_probability = 0.5
-            away_advances_probability = 0.5
-
-        probability_table = pd.DataFrame(
-            [
-                {
-                    "Outcome": f"{home_team} wins in model outcome",
-                    "Probability": home_win_probability,
-                },
-                {
-                    "Outcome": "Draw in model outcome",
-                    "Probability": draw_probability,
-                },
-                {
-                    "Outcome": f"{away_team} wins in model outcome",
-                    "Probability": away_win_probability,
-                },
-                {
-                    "Outcome": f"{home_team} advances after draw removed",
-                    "Probability": home_advances_probability,
-                },
-                {
-                    "Outcome": f"{away_team} advances after draw removed",
-                    "Probability": away_advances_probability,
-                },
+            all_teams = sorted(history["team"].unique().tolist())
+            default_teams = [
+                team
+                for team in [
+                    "Spain",
+                    "Argentina",
+                    "France",
+                    "England",
+                    "Brazil",
+                ]
+                if team in all_teams
             ]
+
+            selected_teams = st.multiselect(
+                "Teams shown on the timeline",
+                options=all_teams,
+                default=default_teams,
+            )
+
+            if selected_teams:
+                timeline_figure = make_timeline_chart(
+                    history,
+                    snapshot_summary,
+                    selected_teams,
+                )
+                st.plotly_chart(timeline_figure, width="stretch")
+            else:
+                st.info("Select at least one team.")
+
+            st.markdown("### Spain's complete checkpoint history")
+            champion_history = history[
+                history["team"] == ACTUAL_CHAMPION
+            ][
+                [
+                    "checkpoint_index",
+                    "snapshot_date",
+                    "snapshot_label",
+                    "champion",
+                    "champion_rank",
+                ]
+            ].copy()
+            champion_history["champion_probability_percent"] = (
+                champion_history["champion"] * 100
+            ).round(2)
+
+            st.dataframe(
+                champion_history[
+                    [
+                        "checkpoint_index",
+                        "snapshot_date",
+                        "snapshot_label",
+                        "champion_probability_percent",
+                        "champion_rank",
+                    ]
+                ],
+                width="stretch",
+                hide_index=True,
+            )
+
+            st.markdown("### Download the archive")
+            download_columns = st.columns(3)
+            download_columns[0].download_button(
+                "Download all prediction rows",
+                data=history.to_csv(index=False),
+                file_name="prediction_history.csv",
+                mime="text/csv",
+            )
+            download_columns[1].download_button(
+                "Download checkpoint summary",
+                data=snapshot_summary.to_csv(index=False),
+                file_name="prediction_snapshot_summary.csv",
+                mime="text/csv",
+            )
+            download_columns[2].download_button(
+                "Download official results",
+                data=json.dumps(official_state, indent=2),
+                file_name="official_results.json",
+                mime="application/json",
+            )
+
+    # --------------------------------------------------------
+    # Snapshot Explorer
+    # --------------------------------------------------------
+
+    with snapshot_tab:
+        st.subheader("Open any historical prediction snapshot")
+
+        if history.empty or snapshot_summary.empty:
+            st.info("No rebuilt snapshots are available yet.")
+        else:
+            checkpoint_options = {
+                str(row["snapshot_label"]): int(row["checkpoint_index"])
+                for _, row in snapshot_summary.iterrows()
+            }
+            selected_label = st.selectbox(
+                "Prediction checkpoint",
+                options=list(checkpoint_options.keys()),
+                index=max(len(checkpoint_options) - 2, 0),
+            )
+            selected_index = checkpoint_options[selected_label]
+
+            snapshot = history[
+                history["checkpoint_index"] == selected_index
+            ].sort_values("champion", ascending=False)
+
+            snapshot_columns = st.columns(3)
+            top_three = snapshot.head(3)
+            for column, (_, row) in zip(
+                snapshot_columns,
+                top_three.iterrows(),
+            ):
+                column.metric(
+                    str(row["team"]),
+                    probability_to_percent(float(row["champion"])),
+                    "Champion odds",
+                )
+
+            snapshot_chart = snapshot.head(10).copy()
+            snapshot_chart["champion_percent"] = (
+                snapshot_chart["champion"] * 100
+            )
+            snapshot_figure = px.bar(
+                snapshot_chart,
+                x="team",
+                y="champion_percent",
+                title=selected_label,
+                labels={
+                    "team": "Team",
+                    "champion_percent": "Champion probability (%)",
+                },
+            )
+            snapshot_figure.update_layout(
+                xaxis_tickangle=-30,
+                height=450,
+            )
+            st.plotly_chart(snapshot_figure, width="stretch")
+
+            snapshot_table = snapshot[
+                [
+                    "team",
+                    "quarterfinal",
+                    "semifinal",
+                    "final",
+                    "champion",
+                    "champion_rank",
+                ]
+            ].copy()
+            for probability_column in [
+                "quarterfinal",
+                "semifinal",
+                "final",
+                "champion",
+            ]:
+                snapshot_table[probability_column] = (
+                    snapshot_table[probability_column] * 100
+                ).round(2)
+
+            st.dataframe(
+                snapshot_table,
+                width="stretch",
+                hide_index=True,
+            )
+
+            st.markdown("### Results known at that moment")
+            checkpoint_state = get_state_at_checkpoint(
+                official_state,
+                selected_index,
+            )
+            display_completed_matches(checkpoint_state)
+
+            available_matches = get_available_matches(checkpoint_state)
+            if available_matches:
+                st.markdown("### Next model matchup from that snapshot")
+                earliest_date = min(
+                    pd.Timestamp(match["date"])
+                    for match, _, _ in available_matches
+                )
+                next_matches = [
+                    item
+                    for item in available_matches
+                    if pd.Timestamp(item[0]["date"]) == earliest_date
+                ]
+
+                try:
+                    model, features, matches = load_interactive_resources()
+                    profiles = build_live_profiles(matches, checkpoint_state)
+                    recent_forms = build_recent_forms(matches, checkpoint_state)
+                    prediction_cache: dict[
+                        tuple[Any, ...], dict[str, float]
+                    ] = {}
+
+                    for match, home_team, away_team in next_matches:
+                        probabilities = predict_live_match(
+                            home_team=home_team,
+                            away_team=away_team,
+                            match_date=pd.Timestamp(match["date"]),
+                            model=model,
+                            features=features,
+                            matches=matches,
+                            profiles=profiles,
+                            recent_forms=recent_forms,
+                            prediction_cache=prediction_cache,
+                            state_key=state_signature(checkpoint_state),
+                            neutral=True,
+                        )
+
+                        home_win = probabilities.get("home_win", 0.0)
+                        draw = probabilities.get("draw", 0.0)
+                        away_win = probabilities.get("away_win", 0.0)
+                        knockout_total = home_win + away_win
+                        home_advance = (
+                            0.5
+                            if knockout_total <= 0
+                            else home_win / knockout_total
+                        )
+                        away_advance = 1 - home_advance
+
+                        st.write(
+                            f"**{format_round_name(match['round'])}: "
+                            f"{home_team} vs {away_team}**"
+                        )
+                        probability_frame = pd.DataFrame(
+                            [
+                                {
+                                    "Outcome": f"{home_team} win",
+                                    "Probability (%)": round(home_win * 100, 2),
+                                },
+                                {
+                                    "Outcome": "Draw",
+                                    "Probability (%)": round(draw * 100, 2),
+                                },
+                                {
+                                    "Outcome": f"{away_team} win",
+                                    "Probability (%)": round(away_win * 100, 2),
+                                },
+                                {
+                                    "Outcome": f"{home_team} advances",
+                                    "Probability (%)": round(home_advance * 100, 2),
+                                },
+                                {
+                                    "Outcome": f"{away_team} advances",
+                                    "Probability (%)": round(away_advance * 100, 2),
+                                },
+                            ]
+                        )
+                        st.dataframe(
+                            probability_frame,
+                            width="stretch",
+                            hide_index=True,
+                        )
+                except Exception as error:
+                    render_model_load_error(error)
+
+    # --------------------------------------------------------
+    # Official Results
+    # --------------------------------------------------------
+
+    with results_tab:
+        st.subheader("Final tournament record")
+
+        result_columns = st.columns(4)
+        result_columns[0].metric("1st", champion)
+        result_columns[1].metric("2nd", runner_up)
+        result_columns[2].metric("3rd", third_place)
+        result_columns[3].metric("4th", fourth_place)
+
+        st.markdown("### Championship match")
+        st.success(
+            f"{final_data['home_team']} {final_data['home_score']}-"
+            f"{final_data['away_score']} {final_data['away_team']} — "
+            f"{champion} won {final_data.get('decision', '').strip()}."
         )
 
-        probability_table["Probability"] = (
-            probability_table["Probability"] * 100
-        ).round(2)
+        bronze_match = tournament_summary.get("third_place_match")
+        if isinstance(bronze_match, dict):
+            st.markdown("### Third-place match")
+            st.info(
+                f"{bronze_match['home_team']} {bronze_match['home_score']}-"
+                f"{bronze_match['away_score']} {bronze_match['away_team']} — "
+                f"{bronze_match['winner']} finished third."
+            )
 
+        st.markdown("### Official result path used by the model archive")
+        display_completed_matches(official_state)
+
+        st.caption(
+            "The third-place playoff is displayed above but is not part of the "
+            "champion-probability bracket, so it is stored in "
+            "tournament_summary.json rather than official_results.json."
+        )
+
+    # --------------------------------------------------------
+    # What-If Lab
+    # --------------------------------------------------------
+
+    with scenario_tab:
+        st.subheader("Historical What-If Lab")
+        st.write(
+            "Start from any saved checkpoint, change the remaining results, "
+            "and rerun the model. These hypothetical changes only live in your "
+            "browser session and reset on refresh."
+        )
+
+        if snapshot_summary.empty:
+            st.info("Build the prediction history before using this section.")
+        else:
+            start_labels = snapshot_summary["snapshot_label"].astype(str).tolist()
+            selected_start_label = st.selectbox(
+                "Start from checkpoint",
+                start_labels,
+                index=0,
+                key="scenario_start_selector",
+            )
+            selected_start_index = int(
+                snapshot_summary.loc[
+                    snapshot_summary["snapshot_label"].astype(str)
+                    == selected_start_label,
+                    "checkpoint_index",
+                ].iloc[0]
+            )
+
+            initialize_scenario_state(
+                official_state,
+                selected_start_index,
+            )
+
+            settings_columns = st.columns(3)
+            num_simulations = int(
+                settings_columns[0].selectbox(
+                    "Scenario simulations",
+                    [500, 1000, 2500, 5000, 10000],
+                    index=1,
+                )
+            )
+            seed = int(
+                settings_columns[1].number_input(
+                    "Random seed",
+                    min_value=1,
+                    max_value=999999,
+                    value=42,
+                    step=1,
+                )
+            )
+            if settings_columns[2].button("Reset this scenario"):
+                reset_scenario_state(
+                    official_state,
+                    selected_start_index,
+                )
+                st.rerun()
+
+            scenario_state = st.session_state["scenario_state"]
+
+            try:
+                with st.spinner("Running the temporary scenario..."):
+                    scenario_results = run_cached_scenario(
+                        state_signature(scenario_state),
+                        num_simulations,
+                        seed,
+                    )
+            except Exception as error:
+                render_model_load_error(error)
+                scenario_results = pd.DataFrame()
+
+            if not scenario_results.empty:
+                display_top_three(scenario_results)
+
+                scenario_figure = make_probability_bar_chart(
+                    scenario_results,
+                    "champion",
+                    "Temporary Scenario Champion Odds",
+                )
+                st.plotly_chart(scenario_figure, width="stretch")
+
+                st.markdown("### Results locked into this scenario")
+                display_completed_matches(scenario_state)
+
+                available_matches = get_available_matches(scenario_state)
+
+                if not available_matches:
+                    st.success("This scenario has reached a champion.")
+                else:
+                    earliest_date = min(
+                        pd.Timestamp(match["date"])
+                        for match, _, _ in available_matches
+                    )
+                    next_matches = [
+                        item
+                        for item in available_matches
+                        if pd.Timestamp(item[0]["date"]) == earliest_date
+                    ]
+
+                    option_map = {
+                        format_match_label(match, home_team, away_team): (
+                            match,
+                            home_team,
+                            away_team,
+                        )
+                        for match, home_team, away_team in next_matches
+                    }
+
+                    selected_match_label = st.selectbox(
+                        "Choose the next hypothetical result",
+                        list(option_map.keys()),
+                    )
+                    selected_match, home_team, away_team = option_map[
+                        selected_match_label
+                    ]
+
+                    with st.form("scenario_result_form"):
+                        score_columns = st.columns(2)
+                        home_score = score_columns[0].number_input(
+                            f"{home_team} score",
+                            min_value=0,
+                            max_value=20,
+                            value=0,
+                            step=1,
+                        )
+                        away_score = score_columns[1].number_input(
+                            f"{away_team} score",
+                            min_value=0,
+                            max_value=20,
+                            value=0,
+                            step=1,
+                        )
+
+                        if home_score > away_score:
+                            winner = home_team
+                            st.info(f"Winner: {winner}")
+                        elif away_score > home_score:
+                            winner = away_team
+                            st.info(f"Winner: {winner}")
+                        else:
+                            winner = st.selectbox(
+                                "Scores are tied. Who advances?",
+                                [home_team, away_team],
+                            )
+
+                        submitted = st.form_submit_button(
+                            "Apply temporary result"
+                        )
+
+                    if submitted:
+                        try:
+                            st.session_state["scenario_state"] = (
+                                add_completed_match_to_state(
+                                    state=scenario_state,
+                                    match=selected_match,
+                                    home_team=home_team,
+                                    away_team=away_team,
+                                    match_date=selected_match["date"],
+                                    home_score=int(home_score),
+                                    away_score=int(away_score),
+                                    winner=winner,
+                                )
+                            )
+                            st.session_state["scenario_path"].append(
+                                f"{home_team} {int(home_score)}-"
+                                f"{int(away_score)} {away_team}"
+                            )
+                            st.rerun()
+                        except ValueError as error:
+                            st.error(str(error))
+
+                if st.session_state.get("scenario_path"):
+                    st.markdown("### Temporary scenario path")
+                    for index, result in enumerate(
+                        st.session_state["scenario_path"],
+                        start=1,
+                    ):
+                        st.write(f"{index}. {result}")
+
+    # --------------------------------------------------------
+    # About the Model
+    # --------------------------------------------------------
+
+    with about_tab:
+        st.subheader("About this project")
+        st.write(
+            "This began as a learning-first machine learning project and ended "
+            "as a deployed forecasting archive. The model predicts home win, "
+            "draw, and away win probabilities. The tournament layer removes "
+            "the draw probability for knockout advancement and runs Monte Carlo "
+            "simulations to estimate each team's chance of reaching later rounds."
+        )
+
+        st.markdown("### Final model selection")
         st.dataframe(
-            probability_table,
+            MODEL_RESULTS,
             width="stretch",
             hide_index=True,
         )
 
-        fig = px.bar(
-            probability_table,
-            x="Outcome",
-            y="Probability",
-            title=f"{home_team} vs {away_team} Probability Breakdown",
-            labels={
-                "Outcome": "Outcome",
-                "Probability": "Probability (%)",
-            },
+        st.markdown("### Features used")
+        try:
+            _, saved_features, _ = load_interactive_resources()
+            st.code("\n".join(saved_features))
+        except Exception:
+            st.code(
+                "elo_difference\n"
+                "home_advantage\n"
+                "recent_win_rate_difference\n"
+                "recent_goals_for_difference\n"
+                "recent_goals_against_difference\n"
+                "recent_goal_difference_difference\n"
+                "rest_days_difference\n"
+                "streak_difference\n"
+                "is_world_cup\n"
+                "is_qualification\n"
+                "is_friendly\n"
+                "tournament_importance\n"
+                "head_to_head_difference\n"
+                "attack_rating_difference\n"
+                "defense_rating_difference"
+            )
+
+        st.markdown("### Why the graph now works")
+        st.write(
+            "The old graph expected historical rows to already exist, but the "
+            "public app never permanently wrote each new snapshot. Streamlit "
+            "session state disappears after restarts, so the line could not "
+            "build a durable timeline. The new history script replays the final "
+            "official result list from zero completed matches through the final, "
+            "runs the model at every prefix, and commits the resulting CSV."
         )
 
-        fig.update_layout(
-            xaxis_tickangle=-30,
-            height=450,
+        st.markdown("### Leakage protection for the archive")
+        st.write(
+            "Historical checkpoints use only processed match rows dated before "
+            "July 5, 2026. Each later tournament result is then applied from "
+            "official_results.json in chronological order. This prevents a "
+            "final, fully updated CSV from leaking later results into earlier "
+            "prediction snapshots."
         )
 
-        st.plotly_chart(fig, width="stretch")
+        if final_report:
+            st.markdown("### Reproducibility report")
+            st.json(final_report)
+
+        st.markdown("### Limitations")
+        st.markdown(
+            """
+            - The model does not include injuries, starting lineups, betting markets, or player-level data.
+            - Official results update team profiles and bracket state; they do not retrain the classifier.
+            - Knockout draws are handled by removing draw probability and normalizing the two win probabilities.
+            - This is a portfolio forecasting experiment, not betting advice or a claim of certainty.
+            """
+        )
 
 
-# ============================================================
-# About Tab
-# ============================================================
-
-with about_tab:
-    st.subheader("About This Project")
-
-    st.markdown(
-        """
-        This dashboard turns the FIFA World Cup machine learning project into
-        an interactive portfolio app.
-
-        The trained model predicts three match outcomes:
-
-        - home win
-        - draw
-        - away win
-
-        The tournament simulator then removes draw outcomes for knockout
-        matches and normalizes the win probabilities so that one team advances.
-        """
-    )
-
-    st.markdown("### Final Model Selected")
-
-    st.write("Gradient Boosting was selected as the best model from Notebook 09.")
-
-    st.dataframe(
-        pd.DataFrame(
-            [
-                {
-                    "Model": "Gradient Boosting",
-                    "Accuracy": 0.603610,
-                    "Log Loss": 0.872078,
-                },
-                {
-                    "Model": "Random Forest",
-                    "Accuracy": 0.580559,
-                    "Log Loss": 0.897091,
-                },
-                {
-                    "Model": "Logistic Regression",
-                    "Accuracy": 0.581168,
-                    "Log Loss": 0.899839,
-                },
-            ]
-        ),
-        width="stretch",
-        hide_index=True,
-    )
-
-    st.markdown("### Features Used")
-
-    st.code("\n".join(features))
-
-    st.markdown("### How Updates Work")
-
-    st.markdown(
-        """
-        Official real-world results are stored in:
-
-        `data/app/official_results.json`
-
-        That file is committed to the repository. Public users cannot edit it
-        from the website.
-
-        The Scenario Lab uses Streamlit session state, so visitors can enter
-        hypothetical scores and watch the probabilities change, but those
-        changes are temporary. Refreshing the page resets the app back to the
-        official committed state.
-        """
-    )
-
-    st.markdown("### Limitations")
-
-    st.markdown(
-        """
-        - The model does not include injuries, lineups, betting markets, or player-level data.
-        - The app updates live features and bracket state, but it does not retrain the model after every match.
-        - Knockout draws are handled by normalizing win probabilities.
-        - The dashboard is designed as a portfolio demo, not a production betting or forecasting system.
-        """
-    )
-
-    st.info(
-        "Portfolio summary: this project trains a football match prediction "
-        "model, selects the best classifier, and deploys an interactive "
-        "dashboard where users can test match-result scenarios and see how "
-        "World Cup probabilities change."
-    )
+if __name__ == "__main__":
+    main()
