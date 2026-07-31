@@ -1,8 +1,21 @@
 # FIFA World Cup ML Predictor
 
-A machine learning project that predicts international football match outcomes and simulates the remaining FIFA World Cup bracket.
+An end-to-end machine learning project that predicts international football match outcomes, simulates tournament results, and preserves how the model's World Cup probabilities changed throughout the completed tournament.
 
 Live demo: https://fifa-world-cup-ml.streamlit.app/
+
+---
+
+## Final Project Status
+
+The 2026 FIFA World Cup has ended, and this project is now published as a completed post-tournament prediction archive.
+
+**Champion:** Spain  
+**Runner-up:** Argentina  
+**Third place:** England  
+**Final:** Spain 1–0 Argentina after extra time
+
+The deployed app now focuses on the completed tournament, saved prediction history, and forecast accountability. Normal page loads use committed CSV and JSON archive files instead of automatically rerunning thousands of simulations.
 
 ---
 
@@ -19,7 +32,7 @@ The goal was not just to call a model from a library and get a result. The goal 
 * how to simulate a tournament with Monte Carlo methods
 * how to turn the final model into a live portfolio dashboard
 
-The final app lets users view the current projected champion, see top tournament probabilities, inspect individual match predictions, and test hypothetical match results in a temporary scenario lab.
+The final app shows the official champion, the completed knockout path, every saved prediction checkpoint, probability timelines, historical match predictions, and temporary what-if scenarios.
 
 The model is trained on historical international match data and uses engineered football features like Elo difference, recent form, rest days, tournament importance, head-to-head record, and attack/defense strength.
 
@@ -27,19 +40,20 @@ The model is trained on historical international match data and uses engineered 
 
 ## Live Demo
 
-The deployed dashboard is here:
+The completed dashboard is available here:
 
 [Open the FIFA World Cup ML Predictor](https://fifa-world-cup-ml.streamlit.app/)
 
-The app has two main modes:
+The application now has six main sections:
 
-1. **Official projection**
-   This uses the current committed tournament state and shows the model's official prediction.
+1. **Dashboard** — champion, final result, key forecast findings, and probability timeline.
+2. **Scenario Lab** — temporary historical what-if simulations that run only when requested.
+3. **Past Predictions** — complete checkpoint history, comparison charts, and downloadable archive data.
+4. **Match Probabilities** — historical match predictions from the information available at each checkpoint.
+5. **Official Results** — the completed official knockout sequence.
+6. **About the Model** — model selection, features, evaluation, design, and limitations.
 
-2. **Scenario Lab**
-   This lets users enter hypothetical match scores and instantly see how the probabilities change. These changes are temporary and reset when the page refreshes.
-
-This was intentional. The public app is interactive, but visitors cannot permanently change the official results.
+The public app reads saved archive files during normal use. CPU-heavy simulations and model predictions only run after a visitor explicitly clicks an interactive action.
 
 ---
 
@@ -121,6 +135,32 @@ elo_difference = home_team_elo - away_team_elo
 ```
 
 This makes the model focus on the matchup instead of treating each team separately.
+
+---
+
+## Forecast Accountability and Prediction Archive
+
+The project preserves what the model believed at every official checkpoint instead of only showing the final state after the tournament ended.
+
+At the first saved checkpoint:
+
+```text
+Argentina champion probability: 31.10%
+Spain champion probability: 21.06%
+Spain rank: #2
+```
+
+Spain was not the original top projection, but the model assigned the eventual champion a meaningful chance from the beginning.
+
+The permanent archive files are:
+
+```text
+data/app/prediction_history.csv
+data/app/prediction_snapshot_summary.csv
+data/app/final_model_report.json
+```
+
+These files preserve each team's quarterfinal, semifinal, final, and champion probability across every saved checkpoint. Because they are committed to the repository, the charts remain available without rerunning the simulations.
 
 ---
 
@@ -224,82 +264,72 @@ The deployed version shows:
 
 ### Dashboard
 
-The main page shows the current official projection:
+The main page presents the completed tournament and the most important model findings:
 
-* projected champion
-* top 3 champion probabilities
-* locked official match results
-* champion probability chart
-* final appearance probability chart
-* full probability table
+* Spain as world champion
+* Spain 1–0 Argentina after extra time
+* Argentina as runner-up
+* England as the third-place team
+* initial projected champion
+* Spain's initial probability and rank
+* champion-probability timeline
+* forecast-accountability summary
 
 ### Scenario Lab
 
-The Scenario Lab lets a user enter hypothetical match scores.
+The Scenario Lab allows temporary historical what-if scenarios. A visitor can start from a saved checkpoint, change a future result, and manually request a new Monte Carlo simulation.
 
-For example:
-
-```text
-Brazil 2 - 1 Norway
-Portugal 1 - 0 Spain
-```
-
-The app then updates the bracket and reruns the simulation.
-
-These scenario results are temporary. They do not save to the repo, database, or public app state.
-
-This makes the dashboard safe for a public portfolio link while still letting people a public portfolio link while still letting people interact with the model.
+Nothing runs automatically, and visitor scenarios do not modify the official archive.
 
 ### Past Predictions
 
-This section is designed to show how official predictions change as real results are committed over time.
+This tab contains:
+
+* champion-probability timeline
+* team comparison controls
+* checkpoint explorer
+* saved probability tables
+* downloadable prediction-history files
 
 ### Match Probabilities
 
-This tab lets users inspect a single unresolved match and see:
+This tab allows visitors to choose a historical checkpoint and calculate the model's probabilities for a match that was unresolved at that time.
 
-* home win probability
+It shows:
+
+* home-win probability
 * draw probability
-* away win probability
-* adjusted knockout advancement probability
+* away-win probability
+* adjusted knockout advancement probabilities
+
+The saved model is loaded only when a visitor requests a calculation.
+
+### Official Results
+
+This tab shows the completed official match sequence used to build the archive.
 
 ### About the Model
 
-This explains:
-
-* what the model predicts
-* which model was selected
-* what features were used
-* how the live updates work
-* what the limitations are
+This section explains the selected model, evaluation results, engineered features, simulation design, archive workflow, and limitations.
 
 ---
 
-## How Live Updating Works
+## Post-Tournament Runtime Design
 
-The trained model itself is not retrained every time a score is entered.
+The tournament is over, so the deployed website no longer reruns the complete tournament simulation whenever it starts, refreshes, or wakes from inactivity.
 
-Instead, the app updates the live tournament state.
+Normal page loads read committed data files for:
 
-When a score is entered in the Scenario Lab, the app:
+1. the champion and final standings
+2. official match results
+3. historical prediction checkpoints
+4. probability timelines
+5. forecast-accountability metrics
+6. the final model report
 
-1. records the temporary result for that user's session
-2. advances the winning team
-3. updates live Elo/form-style inputs
-4. reruns the tournament simulation
-5. shows the new probabilities
+Interactive simulations only run after a visitor presses the Scenario Lab simulation button. Historical match predictions only run after a visitor presses the calculation button.
 
-This is faster and cleaner than retraining the model every time.
-
-For official real results, I update:
-
-```text
-data/app/official_results.json
-```
-
-Then I commit and redeploy the app.
-
-That keeps the public app controlled while still letting it reflect real tournament progress.
+This keeps the completed project fast and avoids unnecessary CPU usage while preserving the interactive ML demonstration.
 
 ---
 
@@ -312,7 +342,11 @@ fifa-world-cup-ml/
 ├── requirements.txt
 ├── data/
 │   ├── app/
-│   │   └── official_results.json
+│   │   ├── official_results.json
+│   │   ├── tournament_summary.json
+│   │   ├── prediction_history.csv
+│   │   ├── prediction_snapshot_summary.csv
+│   │   └── final_model_report.json
 │   └── processed/
 │       └── matches_with_advanced_features.csv
 ├── models/
@@ -329,6 +363,10 @@ fifa-world-cup-ml/
 │   ├── 08_advanced_feature_engineering.ipynb
 │   ├── 09_model_selection.ipynb
 │   └── 10_live_world_cup_prediction.ipynb
+├── scripts/
+│   └── build_prediction_history.py
+├── tests/
+│   └── test_post_tournament_archive.py
 └── .streamlit/
     └── config.toml
 ```
@@ -459,17 +497,19 @@ Covered:
 * running 10,000 simulations
 * saving final prediction results
 
-### Notebook 11 — Live Dashboard
+### Final Streamlit Application
 
-Turned the model into a deployed portfolio app.
+Turned the model into a completed portfolio application.
 
 Covered:
 
-* Streamlit app
-* live dashboard
-* scenario testing
-* temporary user state
-* deployment
+* Streamlit deployment
+* saved official results
+* permanent prediction checkpoints
+* forecast accountability
+* historical probability charts
+* manual what-if simulations
+* post-tournament archive mode
 
 ---
 
@@ -527,48 +567,25 @@ The notebooks also use Jupyter for exploration.
 
 ---
 
-## Updating Official Results
+## Rebuilding the Prediction Archive
 
-The public dashboard uses this file for locked real-world results:
+The committed archive is used during normal website visits and does not need to be rebuilt.
+
+To regenerate all checkpoints from the saved model:
+
+```bash
+python scripts/build_prediction_history.py --simulations 10000
+```
+
+This recreates:
 
 ```text
-data/app/official_results.json
+data/app/prediction_history.csv
+data/app/prediction_snapshot_summary.csv
+data/app/final_model_report.json
 ```
 
-Example:
-
-```json
-{
-  "completed_matches": [
-    {
-      "match_id": "r16_2_left",
-      "round": "round_of_16",
-      "date": "2026-07-06",
-      "home_team": "Portugal",
-      "away_team": "Spain",
-      "home_score": 1,
-      "away_score": 0,
-      "winner": "Portugal"
-    }
-  ]
-}
-```
-
-After editing the file:
-
-```bash
-python -m streamlit run app.py
-```
-
-If the app loads correctly, commit and push:
-
-```bash
-git add data/app/official_results.json
-git commit -m "Update World Cup dashboard after latest result"
-git push
-```
-
-The deployed app will update after redeploy.
+After rebuilding, run the tests and inspect the local website before committing the files.
 
 ---
 
@@ -592,18 +609,19 @@ The point of the project is to show a complete machine learning workflow and an 
 
 ---
 
-## What I Would Improve Next
+## Possible Future Improvements
 
-If I keep expanding this project, the next improvements would be:
+The current version is considered complete. Optional future extensions could include:
 
-* add probability calibration
-* add a Poisson goal model for scoreline prediction
-* save final post-match team profiles directly instead of estimating from processed rows
-* add a database for permanent public prediction snapshots
-* add a cleaner bracket visualization
-* add automatic score updates from a sports API
-* add player availability and injury features
-* build a more formal final model report
+* probability calibration
+* a Poisson goal model
+* scoreline probability predictions
+* player availability and injury features
+* automatic official-score ingestion
+* a richer bracket visualization
+* uncertainty intervals
+* historical World Cup backtesting
+* a static archive mirror on the portfolio website
 
 ---
 
@@ -630,24 +648,20 @@ The hard part is deciding what information the model is allowed to know, buildin
 
 ## Resume Bullet
 
-Built and deployed an interactive FIFA World Cup prediction dashboard using Python, pandas, scikit-learn, custom Elo-style team ratings, time-safe feature engineering, Gradient Boosting, and Monte Carlo simulation to update tournament probabilities as match results change.
+Built and deployed an end-to-end FIFA World Cup machine learning system using Python, pandas, scikit-learn, custom Elo-style ratings, time-safe feature engineering, Gradient Boosting, and Monte Carlo simulation; preserved 14 historical prediction checkpoints in an interactive post-tournament Streamlit archive.
 
 ---
 
 ## Final Project Summary
 
-This project started as a learning exercise and turned into a full portfolio project.
+This project started as a learning exercise and became a complete machine learning portfolio project.
 
-I built the pipeline from raw match data to model training, selected the best model based on evaluation results, simulated the World Cup bracket thousands of times, and deployed a dashboard that lets users explore how different match results change the tournament probabilities.
+I built the workflow from historical match data through feature engineering, model training, evaluation, tournament simulation, live updating, deployment, and final archival.
 
-The final output is not “this team will win.”
-
-The final output is a probability-based system:
+The finished product does not pretend that football is perfectly predictable. Instead, it records what the model believed at each stage and compares those forecasts with what actually happened.
 
 ```text
-Given the current tournament state and historical team features,
-the model estimates each team's chance of reaching each round
-and winning the World Cup.
+Use historical information to estimate probabilities,
+preserve those estimates honestly,
+and evaluate them after the real tournament is complete.
 ```
-
-That is the main idea of the project.
