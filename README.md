@@ -226,7 +226,9 @@ This prevents the model from accidentally learning from the future.
 I trained and compared multiple models:
 
 * Logistic Regression
+
 * Random Forest
+
 * Gradient Boosting
 
 The final model was chosen using evaluation results instead of guessing.
